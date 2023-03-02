@@ -4,7 +4,6 @@ from multipledispatch import dispatch
 from pandarallel import pandarallel
 
 import copy
-import numpy as np
 import pandas as pd
 import requests
 import time
@@ -68,23 +67,6 @@ class Parser:
         df['Next Close'].iloc[-1] = copy.deepcopy(df['Close'].iloc[-1])
         df['Close Delta'] = df['Next Close'] - df['Close']
 
-        # index cci
-        N = 12
-        df['TP'] = (df['Low'] + df['Close'] + df['High']) / 3
-
-        def calc_sma(time):
-            return df[df['Open time'] <= time].tail(N)['TP'].mean()
-
-        def calc_mad(time):
-            rows = df[df['Open time'] <= time].tail(N)
-            return (rows['TP'] - rows['SMA'] + 0.1**10).abs().mean()
-
-        query_second = datetime.now()
-        df['SMA'] = df['Open time'].parallel_apply(lambda time: calc_sma(time))
-        df['MAD'] = df['Open time'].parallel_apply(lambda time: calc_mad(time))
-        df['CCI'] = df.parallel_apply(lambda row: (row['TP'] - row['SMA']) / row['MAD'] / 0.015 , axis=1)
-        print(datetime.now() - query_second)
-        #time.sleep(100000)
         return df
 
     def __get_table(self, start_t: int, limit: int) -> pd.DataFrame:
