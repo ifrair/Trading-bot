@@ -117,9 +117,7 @@ trade()
 #     # print(asset_1)
 
 #     symbol_info = cl.exchange_info(symbol='BTCUSDT')
-#     step_size = 0.0
 #     print(symbol_info)
-
 
 #     # precision = int(round(-math.log(stepSize, 10), 0))
 #     # quantity = float(round(quantity, precision))

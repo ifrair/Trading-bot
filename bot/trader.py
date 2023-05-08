@@ -7,6 +7,7 @@ from binance.spot import Spot
 from datetime import datetime, timedelta
 
 import json
+import math
 import pandas as pd
 
 
@@ -62,7 +63,7 @@ class Trader:
                         f'Income: {self.__income}', file=f)
 
         self.__update_balances()
-
+        self.__update_symb_precision()
         start_time = datetime.now() + timedelta(minutes=self.__tf_minutes)
         start_time -= timedelta(minutes=time_to_int(start_time) // 60000 % self.__tf_minutes)
         start_time -= timedelta(seconds=start_time.second)
@@ -91,16 +92,21 @@ class Trader:
             table = pd.concat([table, self.__parser.get_table(1)], axis=0, ignore_index=True)[-100:].reset_index(drop=True)
 
     def __update_balances(self, raise_exc: bool = False):
-        # old_first = self.__first_balance
-        # old_second = self.__second_balance
         assets = self.client.user_asset()
         self.__first_balance = [float(asset['free']) for asset in assets if asset['asset'] == self.first_asset]
         self.__first_balance = self.__first_balance[0] if len(self.__first_balance) else 0
         self.__second_balance = [float(asset['free']) for asset in assets if asset['asset'] == self.second_asset]
         self.__second_balance = self.__second_balance[0] if len(self.__second_balance) else 0
-        # if abs(old_first - self.__first_balance) / self.__first_balance > 0.001 or \
-        #     abs(old_second - self.__second_balance) / self.__second_balance > 0.001:
-        #     raise Exception("Too big difference between calculated and real balances")
+
+    def __update_symb_precision(self):
+        symbol_info = self.client.exchange_info(symbol=self.symb)
+        stepSize = 0.0
+        for filter in symbol_info['symbols'][0]['filters']:
+            if filter['filterType'] == 'LOT_SIZE':
+                stepSize = float(filter['stepSize'])
+        self.__symbol_precision = int(round(-math.log(stepSize, 10), 0))
+        with open(self.__log_file, 'a') as f:
+            print(f'Symbol precision set to {self.__symbol_precision}', file=f)
 
     def __buy_all(self, asset_num: int) -> None:
         self.__buy(asset_num, money=(self.__first_balance if asset_num == 2 else self.__second_balance))
@@ -108,7 +114,7 @@ class Trader:
     def __buy(self, asset_num: int, money: float) -> None:
         if asset_num == 1:
             money = min(self.__second_balance, money) * (1 - self.__slippage)
-            money = round(money, 5)
+            money = round(money, self.__symbol_precision)
             with open(self.__log_file, 'a') as f:
                 print(f"Sell {money} {self.second_asset}", file=f)
             r = self.client.new_order(
@@ -120,7 +126,7 @@ class Trader:
             )
         else:
             money = min(self.__first_balance, money) * (1 - self.__slippage)
-            money = round(money, 5)
+            money = round(money, self.__symbol_precision)
             with open(self.__log_file, 'a') as f:
                 print(f"Sell {money} {self.first_asset}", file=f)
             r = self.client.new_order(
