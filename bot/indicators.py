@@ -27,6 +27,9 @@ def calc_CCI(df: pd.DataFrame, drop_first: bool = False) -> None:
     if drop_first:
         df = df.drop(range(N * 2)).reset_index(drop=True)
 
+# index rsi
+def calc_RSI(df: pd.DataFrame, drop_first: bool = False) -> None:
+    pass
 
 def calc_indicators(df: pd.DataFrame, indicators: list, drop_first: bool = False) -> None:
     """

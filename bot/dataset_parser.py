@@ -15,6 +15,7 @@ import time
 class Parser:
 
     __batch_size: int = 1000
+    __log_file: str = 'log_parser.txt'
 
     def __init__(
         self,
@@ -32,6 +33,8 @@ class Parser:
         self.__tf_minutes = tf_to_minutes(tf)
         self.timezone = timezone
         self.ignore_gaps = ignore_gaps
+        f = open(self.__log_file, 'w')
+        f.close()
         # pandarallel.initialize()
 
     @dispatch(str, str)
@@ -61,9 +64,9 @@ class Parser:
         :param start_t: start time
         :param limit: num candles from start
         """
-        print("Start time:", start_t, "Limit: ", limit)
+        with open(self.__log_file, 'a') as f:
+            print("Start time:", start_t, "Limit: ", limit, file=f)
         resp = self.__get_table(time_to_int(start_t) - self.timezone * 60 * 60000, limit)
-        print(resp)
         resp.sort_values(0, inplace=True, ignore_index = True)
 
         df = pd.DataFrame()
@@ -89,7 +92,8 @@ class Parser:
         # round up
         start_t //= (self.__tf_minutes * 60000)
         start_t *= (self.__tf_minutes * 60000)
-        print("Start from:", start_t, ", Num rows:", limit)
+        with open(self.__log_file, 'a') as f:
+            print("Start from:", start_t, ", Num rows:", limit, file=f)
         res = pd.DataFrame()
         while limit > 0:
             query_second = datetime.now()
@@ -99,7 +103,8 @@ class Parser:
             limit -= limit_delta
             start_t += limit_delta * self.__tf_minutes * 60000
             time_delta = datetime.now() - query_second
-            print(time_delta, limit)
+            with open(self.__log_file, 'a') as f:
+                print(time_delta, limit, file=f)
             time.sleep(max(0, 0.5 - time_delta.microseconds / 1000000))
         return res
 
@@ -125,7 +130,8 @@ class Parser:
                 return r
             elif r.status_code >= 500:
                 error_code = str(r.status_code)
-                print(error_code + '\n' +  r.json())
+                with open(self.__log_file, 'a') as f:
+                    print(f'\n\n\nERROR!!!!\n{error_code} \n{r.json()}\n\n', file=f)
                 sleep(secs)
                 secs *= 1.5
                 tries -= 1

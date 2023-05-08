@@ -6,15 +6,19 @@ from binance.spot import Spot
 
 from datetime import datetime, timedelta
 
+import json
 import pandas as pd
 
 
 class Trader:
 
+    __log_file = "log_trader.txt"
+    __settings_file = "settings_trader.txt"
     __indicators: list = ['CCI']
-    __first_balance = 0
-    __second_balance = 0
+    __first_balance = 0.0
+    __second_balance = 0.0
     __print_friq = 1
+    __slippage = 0.01
     # __risk_coef = 1000000
     __withdrawal_coef = 0
     __income = 0
@@ -46,28 +50,41 @@ class Trader:
         self.symb = first_asset + second_asset
         self.__parser = Parser(self.symb, tf, timezone)
         self.__tf_minutes = tf_to_minutes(tf)
+        f = open(self.__log_file, 'w')
+        f.close()
 
     def trade(self):
+        def print_state():
+            with open(self.__log_file, 'a') as f:
+                    print(
+                        f'Time: {start_time}, First: {self.__first_balance}, '\
+                        f'Second: {self.__second_balance}, Price: {table.iloc[-1]["Close"]}, '\
+                        f'Income: {self.__income}', file=f)
+
         self.__update_balances()
 
         start_time = datetime.now() + timedelta(minutes=self.__tf_minutes)
         start_time -= timedelta(minutes=time_to_int(start_time) // 60000 % self.__tf_minutes)
         start_time -= timedelta(seconds=start_time.second)
-        print(start_time)
+        with open(self.__log_file, 'a') as f:
+            print(f"Start time: {start_time}, Timeframe {self.__tf_minutes} mins, Simbol {self.symb}", file=f)
         wait_till(start_time)
         table = self.__parser.get_table(100)
 
         step = 0
         while True:
+            if step % self.__print_friq == 0:
+                print_state()
             step += 1
             calc_indicators(table, self.__indicators)
             self.__update_balances()
 
-            # buy some less
-            print(table.tail())
-
-            if step % self.__print_friq == 0:
-                print(f'Time: {start_time}, First: {int(self.__first_balance)}, Second: {int(self.__second_balance)}, Price: {int(table.iloc[-1]["Close"])}, Income: {int(self.__income)}')
+            if table.iloc[-1]["CCI"] > 1:
+                print_state()
+                self.__buy_all(2)
+            elif table.iloc[-1]["CCI"] < -1:
+                print_state()
+                self.__buy_all(1)
 
             start_time += timedelta(minutes=self.__tf_minutes)
             wait_till(start_time)
@@ -76,14 +93,40 @@ class Trader:
     def __update_balances(self, raise_exc: bool = False):
         # old_first = self.__first_balance
         # old_second = self.__second_balance
-        self.__first_balance = 0 # TODO
-        self.__second_balance = 0 # TODO
+        assets = self.client.user_asset()
+        self.__first_balance = [float(asset['free']) for asset in assets if asset['asset'] == self.first_asset]
+        self.__first_balance = self.__first_balance[0] if len(self.__first_balance) else 0
+        self.__second_balance = [float(asset['free']) for asset in assets if asset['asset'] == self.second_asset]
+        self.__second_balance = self.__second_balance[0] if len(self.__second_balance) else 0
         # if abs(old_first - self.__first_balance) / self.__first_balance > 0.001 or \
         #     abs(old_second - self.__second_balance) / self.__second_balance > 0.001:
         #     raise Exception("Too big difference between calculated and real balances")
 
-    def __buy_first(self, money: float) -> None:
-        pass
+    def __buy_all(self, asset_num: int) -> None:
+        self.__buy(asset_num, money=(self.__first_balance if asset_num == 2 else self.__second_balance))
 
-    def __buy_second(self, money: float) -> None:
-        pass
+    def __buy(self, asset_num: int, money: float) -> None:
+        if asset_num == 1:
+            money = min(self.__second_balance, money) * (1 - self.__slippage)
+            money = round(money, 5)
+            with open(self.__log_file, 'a') as f:
+                print(f"Sell {money} {self.second_asset}", file=f)
+            r = self.client.new_order(
+                symbol=self.symb,
+                # newClientOrderId="Test_0",
+                side='BUY',
+                type='MARKET',
+                quoteOrderQty=money,
+            )
+        else:
+            money = min(self.__first_balance, money) * (1 - self.__slippage)
+            money = round(money, 5)
+            with open(self.__log_file, 'a') as f:
+                print(f"Sell {money} {self.first_asset}", file=f)
+            r = self.client.new_order(
+                symbol=self.symb,
+                # newClientOrderId="Test_0",
+                side='SELL',
+                type='MARKET',
+                quantity=money,
+            )
