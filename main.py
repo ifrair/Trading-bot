@@ -59,13 +59,11 @@ def trade():
             ).trade()
 
         except ResponseError as e:
-            with open("log_parser.txt", 'a') as f:
-                print(repr(e), file=f)
-            print(repr(e))
+            with open("log_errors.txt", 'a') as f:
+                print(f"Parser error:\n{repr(e)}")
         except ClientError as e:
-            with open("log_trader.txt", 'a') as f:
-                print(e.error_code, e.error_message, file=f)
-            print(e.error_code, e.error_message)
+            with open("log_errors.txt", 'a') as f:
+                print(f"Trader error:\n{e.error_code},\n{e.error_message}", file=f)
         sleep(300)
 
 trade()

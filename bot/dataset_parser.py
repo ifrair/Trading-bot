@@ -7,6 +7,7 @@ from multipledispatch import dispatch
 from time import sleep
 
 import copy
+import json
 import pandas as pd
 import requests
 import time
@@ -14,8 +15,7 @@ import time
 
 class Parser:
 
-    __batch_size: int = 1000
-    __log_file: str = 'log_parser.txt'
+    __settings_file = "settings.json"
 
     def __init__(
         self,
@@ -33,7 +33,8 @@ class Parser:
         self.__tf_minutes = tf_to_minutes(tf)
         self.timezone = timezone
         self.ignore_gaps = ignore_gaps
-        f = open(self.__log_file, 'w')
+        self.__update_settings()
+        f = open(self.__settings['log_file'], 'w')
         f.close()
         # pandarallel.initialize()
 
@@ -64,7 +65,7 @@ class Parser:
         :param start_t: start time
         :param limit: num candles from start
         """
-        with open(self.__log_file, 'a') as f:
+        with open(self.__settings['log_file'], 'a') as f:
             print("Start time:", start_t, "Limit: ", limit, file=f)
         resp = self.__get_table(time_to_int(start_t) - self.timezone * 60 * 60000, limit)
         resp.sort_values(0, inplace=True, ignore_index = True)
@@ -92,18 +93,18 @@ class Parser:
         # round up
         start_t //= (self.__tf_minutes * 60000)
         start_t *= (self.__tf_minutes * 60000)
-        with open(self.__log_file, 'a') as f:
+        with open(self.__settings['log_file'], 'a') as f:
             print("Start from:", start_t, ", Num rows:", limit, file=f)
         res = pd.DataFrame()
         while limit > 0:
             query_second = datetime.now()
-            limit_delta = min(self.__batch_size, limit)
+            limit_delta = min(self.__settings['batch_size'], limit)
             resp = self.__get_response(start_t, limit_delta)
             res = pd.concat([res, pd.DataFrame(resp.json())], axis=0, ignore_index=True)
             limit -= limit_delta
             start_t += limit_delta * self.__tf_minutes * 60000
             time_delta = datetime.now() - query_second
-            with open(self.__log_file, 'a') as f:
+            with open(self.__settings['log_file'], 'a') as f:
                 print(time_delta, limit, file=f)
             time.sleep(max(0, 0.5 - time_delta.microseconds / 1000000))
         return res
@@ -130,7 +131,7 @@ class Parser:
                 return r
             elif r.status_code >= 500:
                 error_code = str(r.status_code)
-                with open(self.__log_file, 'a') as f:
+                with open(self.__settings['log_file'], 'a') as f:
                     print(f'\n\n\nERROR!!!!\n{error_code} \n{r.json()}\n\n', file=f)
                 sleep(secs)
                 secs *= 1.5
@@ -138,3 +139,7 @@ class Parser:
             else:
                 raise RequestError(f'{r.status_code}\n{r.json()}')
         raise ResponseError(f'{error_code}\nNo response from market')
+
+    def __update_settings(self):
+        with open(self.__settings_file, 'r') as f:
+            self.__settings = json.load(f)["parser"]

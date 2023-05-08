@@ -12,18 +12,10 @@ import pandas as pd
 
 
 class Trader:
-
-    __log_file = "log_trader.txt"
-    __settings_file = "settings_trader.txt"
-    __indicators: list = ['CCI']
+    __settings_file = "settings.json"
     __first_balance = 0.0
     __second_balance = 0.0
-    __print_friq = 1
-    __slippage = 0.01
-    # __risk_coef = 1000000
-    __withdrawal_coef = 0
-    __income = 0
-    __comission = 0
+    __income = 0.0
 
     def __init__(
         self,
@@ -51,39 +43,44 @@ class Trader:
         self.symb = first_asset + second_asset
         self.__parser = Parser(self.symb, tf, timezone)
         self.__tf_minutes = tf_to_minutes(tf)
-        f = open(self.__log_file, 'w')
-        f.close()
+        self.__update_settings()
+        self.__update_symb_precision()
 
     def trade(self):
         def print_state():
-            with open(self.__log_file, 'a') as f:
+            with open(self.__settings["log_file"], 'a') as f:
                     print(
                         f'Time: {start_time}, First: {self.__first_balance}, '\
                         f'Second: {self.__second_balance}, Price: {table.iloc[-1]["Close"]}, '\
                         f'Income: {self.__income}', file=f)
 
         self.__update_balances()
-        self.__update_symb_precision()
+        # cleaning logs
+        f = open(self.__settings["log_file"], 'w')
+        f.close()
+        # updating start time
         start_time = datetime.now() + timedelta(minutes=self.__tf_minutes)
         start_time -= timedelta(minutes=time_to_int(start_time) // 60000 % self.__tf_minutes)
         start_time -= timedelta(seconds=start_time.second)
-        with open(self.__log_file, 'a') as f:
+        with open(self.__settings["log_file"], 'a') as f:
             print(f"Start time: {start_time}, Timeframe {self.__tf_minutes} mins, Simbol {self.symb}", file=f)
+
         wait_till(start_time)
+        # getting rows to calculate indicators
         table = self.__parser.get_table(100)
 
         step = 0
         while True:
-            if step % self.__print_friq == 0:
+            if step % self.__settings["print_friq"] == 0:
                 print_state()
             step += 1
-            calc_indicators(table, self.__indicators)
+            calc_indicators(table, self.__settings["indicators"])
             self.__update_balances()
 
-            if table.iloc[-1]["CCI"] > 1:
+            if table.iloc[-1]["CCI"] > self.__settings["strategy"]["CCI_max"]:
                 print_state()
                 self.__buy_all(2)
-            elif table.iloc[-1]["CCI"] < -1:
+            elif table.iloc[-1]["CCI"] < self.__settings["strategy"]["CCI_min"]:
                 print_state()
                 self.__buy_all(1)
 
@@ -91,7 +88,12 @@ class Trader:
             wait_till(start_time)
             table = pd.concat([table, self.__parser.get_table(1)], axis=0, ignore_index=True)[-100:].reset_index(drop=True)
 
-    def __update_balances(self, raise_exc: bool = False):
+    def __update_settings(self):
+        with open(self.__settings_file, 'r') as f:
+            self.__settings = json.load(f)["trader"]
+
+
+    def __update_balances(self):
         assets = self.client.user_asset()
         self.__first_balance = [float(asset['free']) for asset in assets if asset['asset'] == self.first_asset]
         self.__first_balance = self.__first_balance[0] if len(self.__first_balance) else 0
@@ -104,18 +106,32 @@ class Trader:
         for filter in symbol_info['symbols'][0]['filters']:
             if filter['filterType'] == 'LOT_SIZE':
                 stepSize = float(filter['stepSize'])
+                self.__min_amount_first = float(filter['minQty'])
+            elif filter['filterType'] == 'NOTIONAL':
+                self.__min_amount_second = float(filter['minNotional'])
         self.__symbol_precision = int(round(-math.log(stepSize, 10), 0))
-        with open(self.__log_file, 'a') as f:
+
+        with open(self.__settings["log_file"], 'a') as f:
             print(f'Symbol precision set to {self.__symbol_precision}', file=f)
 
     def __buy_all(self, asset_num: int) -> None:
+        """
+        :param asset_num: 1 if buy first asset else 2
+        """
         self.__buy(asset_num, money=(self.__first_balance if asset_num == 2 else self.__second_balance))
 
     def __buy(self, asset_num: int, money: float) -> None:
+        """
+        :param asset_num: 1 if buy first asset else 2
+        :param money: amount of another asset to spend
+        """
         if asset_num == 1:
-            money = min(self.__second_balance, money) * (1 - self.__slippage)
-            money = round(money, self.__symbol_precision)
-            with open(self.__log_file, 'a') as f:
+            money = min(self.__second_balance, money) * (1 - self.__settings["slippage"])
+            money = int(money * pow(10,self.__symbol_precision)) / pow(10, self.__symbol_precision)
+            if money < self.__min_amount_second:
+                return
+
+            with open(self.__settings["log_file"], 'a') as f:
                 print(f"Sell {money} {self.second_asset}", file=f)
             r = self.client.new_order(
                 symbol=self.symb,
@@ -125,9 +141,12 @@ class Trader:
                 quoteOrderQty=money,
             )
         else:
-            money = min(self.__first_balance, money) * (1 - self.__slippage)
-            money = round(money, self.__symbol_precision)
-            with open(self.__log_file, 'a') as f:
+            money = min(self.__first_balance, money) * (1 - self.__settings["slippage"])
+            money = int(money * pow(10,self.__symbol_precision)) / pow(10, self.__symbol_precision)
+            if money < self.__min_amount_first:
+                return
+
+            with open(self.__settings["log_file"], 'a') as f:
                 print(f"Sell {money} {self.first_asset}", file=f)
             r = self.client.new_order(
                 symbol=self.symb,
