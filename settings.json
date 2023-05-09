@@ -1,4 +1,8 @@
 {
+    "main": {
+        "log_file": "log_main.txt",
+        "timezone": 3
+    },
     "parser": {
         "log_file": "log_parser.txt",
         "batch_size": 1000

@@ -8,8 +8,10 @@ from bot.trader import Trader
 import creds
 
 from binance.error import ClientError
+from datetime import datetime
 from time import sleep
 
+import json
 import pandas as pd
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
@@ -18,11 +20,13 @@ pd.set_option('display.width', 1000)
 import warnings
 warnings.filterwarnings("ignore")
 
-timezone = 3
+
+with open("settings.json", 'r') as f:
+    settings = json.load(f)["main"]
 
 def download_data():
     table = Parser('SOLUSDT', '5m', ignore_gaps=True).get_table("2023-01-15T00:00:00", "2023-01-16T00:00:00")
-    # table = Parser('BTCUSDT', '1m', timezone).get_table("2023-04-12T12:20:00", 1)
+    # table = Parser('BTCUSDT', '1m', settings["timezone"]).get_table("2023-04-12T12:20:00", 1)
     #table.to_csv('data/data_SOL_5m.csv', index=False)
     # table.to_csv('data.csv', mode='a', index=False)
     # table.iloc[:50000].to_csv('data/data_small.csv', index=False)
@@ -46,25 +50,35 @@ def simulate():
     Simulator(df_x.iloc[4000:], df_y.iloc[4000:]).simulate()
 
 def trade():
-    # df = pd.read_csv("data/data.csv")
-    # calc_indicators(df, ['CCI'])
+    def print_logs(msg: str) -> None:
+        with open(settings["log_file"], 'a') as f:
+            print(f"{msg}, {datetime.now()}")
+
+    f = open(settings["log_file"], 'w')
+    f.close()
+
+    trader = Trader(
+        creds.api_key,
+        creds.sec_key,
+        first_asset="BTC",
+        second_asset="USDT",
+        timezone=settings["timezone"],
+    )
+
     while True:
         try:
-            Trader(
-                creds.api_key,
-                creds.sec_key,
-                first_asset="BTC",
-                second_asset="USDT",
-                timezone=timezone,
-            ).trade()
+            print_logs("Start trading")
+            trader.trade()
 
         except ResponseError as e:
-            with open("log_errors.txt", 'a') as f:
-                print(f"Parser error:\n{repr(e)}")
+                print_logs(f"Parser error:\n{repr(e)}")
         except ClientError as e:
-            with open("log_errors.txt", 'a') as f:
-                print(f"Trader error:\n{e.error_code},\n{e.error_message}", file=f)
+                print_logs(f"Trader error:\n{e.error_code},\n{e.error_message}")
+        except Exception as e:
+                print_logs(f"Critical error:\n{repr(e)}")
+                raise
         sleep(300)
+        print_logs("Restartng")
 
 trade()
 
@@ -77,10 +91,6 @@ trade()
 # from pandas import DataFrame
 
 # import creds
-
-# pd.set_option('display.max_rows', 500)
-# pd.set_option('display.max_columns', 500)
-# pd.set_option('display.width', 1000)
 
 # cl = Spot(
 #     creds.api_key,

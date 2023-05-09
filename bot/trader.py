@@ -15,6 +15,7 @@ class Trader:
     __settings_file = "settings.json"
     __first_balance = 0.0
     __second_balance = 0.0
+    # money to save (in second asset by default)
     __income = 0.0
 
     def __init__(
@@ -47,13 +48,15 @@ class Trader:
         self.__update_symb_precision()
 
     def trade(self):
-        def print_state():
+        def print_state(msg: str = None):
             with open(self.__settings["log_file"], 'a') as f:
                     print(
+                        msg if msg is not None else
                         f'Time: {start_time}, First: {self.__first_balance}, '\
                         f'Second: {self.__second_balance}, Price: {table.iloc[-1]["Close"]}, '\
                         f'Income: {self.__income}', file=f)
 
+        self.__update_settings()
         self.__update_balances()
         # cleaning logs
         f = open(self.__settings["log_file"], 'w')
@@ -62,8 +65,7 @@ class Trader:
         start_time = datetime.now() + timedelta(minutes=self.__tf_minutes)
         start_time -= timedelta(minutes=time_to_int(start_time) // 60000 % self.__tf_minutes)
         start_time -= timedelta(seconds=start_time.second)
-        with open(self.__settings["log_file"], 'a') as f:
-            print(f"Start time: {start_time}, Timeframe {self.__tf_minutes} mins, Simbol {self.symb}", file=f)
+        print_state(f"Start time: {start_time}, Timeframe {self.__tf_minutes} mins, Simbol {self.symb}")
 
         wait_till(start_time)
         # getting rows to calculate indicators
@@ -99,6 +101,7 @@ class Trader:
         self.__first_balance = self.__first_balance[0] if len(self.__first_balance) else 0
         self.__second_balance = [float(asset['free']) for asset in assets if asset['asset'] == self.second_asset]
         self.__second_balance = self.__second_balance[0] if len(self.__second_balance) else 0
+        self.__second_balance = max(0, self.__second_balance - self.__income)
 
     def __update_symb_precision(self):
         symbol_info = self.client.exchange_info(symbol=self.symb)
@@ -125,9 +128,15 @@ class Trader:
         :param asset_num: 1 if buy first asset else 2
         :param money: amount of another asset to spend
         """
+        def get_income():
+            income_delta = money * self.__settings["withdrawal_coef"]
+            self.__income += income_delta
+            money -= income_delta
+            money = int(money * pow(10,self.__symbol_precision)) / pow(10, self.__symbol_precision)
+
         if asset_num == 1:
             money = min(self.__second_balance, money) * (1 - self.__settings["slippage"])
-            money = int(money * pow(10,self.__symbol_precision)) / pow(10, self.__symbol_precision)
+            get_income()
             if money < self.__min_amount_second:
                 return
 
@@ -142,7 +151,7 @@ class Trader:
             )
         else:
             money = min(self.__first_balance, money) * (1 - self.__settings["slippage"])
-            money = int(money * pow(10,self.__symbol_precision)) / pow(10, self.__symbol_precision)
+            get_income()
             if money < self.__min_amount_first:
                 return
 
