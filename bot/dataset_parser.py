@@ -10,7 +10,6 @@ import copy
 import json
 import pandas as pd
 import requests
-import time
 
 
 class Parser:
@@ -46,7 +45,7 @@ class Parser:
         """
         return self.get_table(
             start_t,
-            (time_to_int(end_t) - 60000 - time_to_int(start_t)) // self.__tf_minutes // 60000
+            (time_to_int(end_t) - time_to_int(start_t)) // self.__tf_minutes // 60000
         )
 
     @dispatch(int)
@@ -104,9 +103,9 @@ class Parser:
             limit -= limit_delta
             start_t += limit_delta * self.__tf_minutes * 60000
             time_delta = datetime.now() - query_second
+            sleep(max(0, 0.5 - time_delta.microseconds / 1000000))
             with open(self.__settings['log_file'], 'a') as f:
-                print(time_delta, limit, file=f)
-            time.sleep(max(0, 0.5 - time_delta.microseconds / 1000000))
+                print(f"Loaded {limit_delta} rows, {datetime.now() - query_second} time spent, left {limit} rows", file=f)
         return res
 
     def __get_response(self, start_t: int, limit: int) -> requests.models.Response:
@@ -125,11 +124,11 @@ class Parser:
             }
             r = requests.get(url, params=params)
             if r.status_code == 200:
-                sz = pd.DataFrame(r.json()).shape[0]
                 if not self.ignore_gaps and pd.DataFrame(r.json()).shape[0] != limit:
-                    raise ResponseError(f'Get klines response size is {sz}, Limit is {limit}')
+                    sz = pd.DataFrame(r.json()).shape[0]
+                    raise RequestError(f'Get klines response size is {sz}, Limit is {limit}')
                 return r
-            elif r.status_code >= 500:
+            elif r.status_code // 100 == 5:
                 error_code = str(r.status_code)
                 with open(self.__settings['log_file'], 'a') as f:
                     print(f'\n\n\nERROR!!!!\n{error_code} \n{r.json()}\n\n', file=f)

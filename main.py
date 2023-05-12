@@ -17,6 +17,7 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
+import unittest
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -49,6 +50,13 @@ def simulate():
 
     Simulator(df_x.iloc[4000:], df_y.iloc[4000:]).simulate()
 
+def test():
+    loader = unittest.TestLoader()
+    start_dir = 'tests/'
+    suite = loader.discover(start_dir)
+    runner = unittest.TextTestRunner()
+    runner.run(suite)
+
 def trade():
     def print_logs(msg: str) -> None:
         with open(settings["log_file"], 'a') as f:
@@ -80,7 +88,7 @@ def trade():
         sleep(300)
         print_logs("Restartng")
 
-trade()
+test()
 
 
 # from binance.spot import Spot
