@@ -1,7 +1,7 @@
 from bot.drawer import draw_dataset
 from bot.dataset_parser import Parser
 from bot.exceptions import ResponseError
-from bot.indicators import calc_indicators
+from bot.indicators import Indicators
 from bot.simulator import Simulator
 from bot.trader import Trader
 
@@ -26,21 +26,21 @@ with open("settings.json", 'r') as f:
     settings = json.load(f)["main"]
 
 def download_data():
-    table = Parser('SOLUSDT', '5m', ignore_gaps=True).get_table("2023-01-15T00:00:00", "2023-01-16T00:00:00")
+    table = Parser('BTCUSDT', '1m', ignore_gaps=True).get_table("2023-01-15T17:00:00", "2023-01-16T00:00:00")
     # table = Parser('BTCUSDT', '1m', settings["timezone"]).get_table("2023-04-12T12:20:00", 1)
-    #table.to_csv('data/data_SOL_5m.csv', index=False)
     # table.to_csv('data.csv', mode='a', index=False)
     # table.iloc[:50000].to_csv('data/data_small.csv', index=False)
     # table[['Open', 'Close', 'Middle', 'Low', 'High', 'Volume usd', 'CCI']].to_csv('data.csv')
     # table[['Next Close']].to_csv('Y.csv')
     # print(table)
-    calc_indicators(table, ['CCI'])
+    Indicators().calc_indicators(table, ['CCI', 'RSI'], True)
     draw_dataset(table)
+    table.to_csv('data/data.csv', index=False)
     return table
 
 def simulate():
     df = pd.read_csv("data/data_SOL_5m.csv")
-    calc_indicators(df, ['CCI'])
+    Indicators().calc_indicators(df, ['CCI', 'RSI'])
     df_y = df[["Next Close", "Close Delta"]]
     df_x = df.drop(columns=["Next Close", "Close Delta"])
 

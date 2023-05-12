@@ -82,10 +82,9 @@ class Parser:
         df['Middle time'] = (df['Close time'] - df['Open time']) / 2 + df['Open time']
 
         # prediction
-        df['Next Close'] = copy.deepcopy(df['Close']).shift(-1)
-        df['Next Close'].iloc[-1] = copy.deepcopy(df['Close'].iloc[-1])
+        df['Next Close'] = df['Close'].shift(-1).fillna(df['Close'].iloc[-1])
         df['Close Delta'] = (df['Next Close'] - df['Close']) / df['Close']
-
+        print((df['Next Close'] - df['Close']) / df['Close'])
         return df
 
     def __get_table(self, start_t: int, limit: int) -> pd.DataFrame:

@@ -1,5 +1,5 @@
 from bot.dataset_parser import Parser
-from bot.indicators import calc_indicators
+from bot.indicators import Indicators
 from bot.utiles import wait_till, tf_to_minutes, time_to_int
 
 from binance.spot import Spot
@@ -71,12 +71,13 @@ class Trader:
         # getting rows to calculate indicators
         table = self.__parser.get_table(100)
 
+        indicators = Indicators(self.__settings["indicator_window"])
         step = 0
         while True:
             if step % self.__settings["print_friq"] == 0:
                 print_state()
             step += 1
-            calc_indicators(table, self.__settings["indicators"])
+            indicators.calc_indicators(table, self.__settings["indicators"])
             self.__update_balances()
 
             if table.iloc[-1]["CCI"] > self.__settings["strategy"]["CCI_max"]:
