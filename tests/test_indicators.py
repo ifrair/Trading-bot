@@ -19,10 +19,13 @@ class Test(unittest.TestCase):
         assert not diff, f"Indicators {list(diff)} are not calculated"
         diff = set(columns_orig).difference(table.columns)
         assert not diff, f"Columns {list(diff)} disappeared"
-        assert table.shape[0] > 0 and  table.shape[0] <= 120 - 2 * indicators.window, f"{table.shape[0]} rows in table"
+        assert table.shape[0] > 0 and \
+            table.shape[0] <= 120 - 2 * indicators.window, \
+            f"{table.shape[0]} rows in table"
 
         for ind in set(table.columns).difference(columns_orig):
-            assert all(table[ind].values != None), f"Found None value in {ind} column"
+            assert all(val is not None for val in table[ind].values), \
+                f"Found None value in {ind} column"
 
     # checks indicators that should be
     def __check_indicator(self, ind_name: str, columns_list: list = []):
@@ -31,9 +34,10 @@ class Test(unittest.TestCase):
         Indicators().calc_indicators(table, [ind_name], drop_first=True)
 
         assert columns_expected == set(table.columns), \
-            f'Expected: {columns_expected},\n' \
-            f'Real: {set(table.columns)},\n' \
-            f'Difference: {set(table.columns).symmetric_difference(columns_expected)},\n'
+            f"Expected: {columns_expected},\n" \
+            f"Real: {set(table.columns)},\n" \
+            f"Difference: " \
+            f"{set(table.columns).symmetric_difference(columns_expected)},\n"
 
         return table
 
@@ -65,5 +69,8 @@ class Test(unittest.TestCase):
 
     # checks RSI
     def test_RSI(self):
-        table = self.__check_indicator('RSI', ['RSI', 'RS', 'EMA', 'EMAU', 'EMAD'])
+        table = self.__check_indicator(
+            'RSI',
+            ['RSI', 'RS', 'EMA', 'EMAU', 'EMAD']
+        )
         assert all(table['RSI'] >= 0) and all(table['RSI'] <= 100)

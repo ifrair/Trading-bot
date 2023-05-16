@@ -44,11 +44,12 @@ class Parser:
         """
         return self.get_table(
             start_t,
-            (time_to_int(end_t) - time_to_int(start_t)) // self.__tf_minutes // 60000
+            (time_to_int(end_t) - time_to_int(start_t)) //
+            (self.__tf_minutes * 60000)
         )
 
     @dispatch(int)
-    def get_table(self, limit: int) -> pd.DataFrame:
+    def get_table(self, limit: int) -> pd.DataFrame:  # noqa: F811
         """
         :param limit: num candles from start
         """
@@ -58,15 +59,22 @@ class Parser:
         )
 
     @dispatch(str, int)
-    def get_table(self, start_t: str, limit: int) -> pd.DataFrame:
+    def get_table(  # noqa: F811
+        self,
+        start_t: str,
+        limit: int
+    ) -> pd.DataFrame:
         """
         :param start_t: start time
         :param limit: num candles from start
         """
         with open(self.__settings['log_file'], 'a') as f:
             print("Start time:", start_t, "Limit: ", limit, file=f)
-        resp = self.__get_table(time_to_int(start_t) - self.timezone * 60 * 60000, limit)
-        resp.sort_values(0, inplace=True, ignore_index = True)
+        resp = self.__get_table(
+            time_to_int(start_t) - self.timezone * 60 * 60000,
+            limit,
+        )
+        resp.sort_values(0, inplace=True, ignore_index=True)
 
         df = pd.DataFrame()
         df['Open'] = resp[1].apply(lambda x: float(x))
@@ -78,12 +86,12 @@ class Parser:
         df['Volume usd'] = resp[7].apply(lambda x: float(x))
         df['Open time'] = pd.to_datetime(resp[0], unit='ms')
         df['Close time'] = pd.to_datetime(resp[6], unit='ms')
-        df['Middle time'] = (df['Close time'] - df['Open time']) / 2 + df['Open time']
+        df['Middle time'] = (df['Close time'] - df['Open time']) / 2 \
+            + df['Open time']
 
         # prediction
         df['Next Close'] = df['Close'].shift(-1).fillna(df['Close'].iloc[-1])
         df['Close Delta'] = (df['Next Close'] - df['Close']) / df['Close']
-        print((df['Next Close'] - df['Close']) / df['Close'])
         return df
 
     def __get_table(self, start_t: int, limit: int) -> pd.DataFrame:
@@ -97,16 +105,29 @@ class Parser:
             query_second = datetime.now()
             limit_delta = min(self.__settings['batch_size'], limit)
             resp = self.__get_response(start_t, limit_delta)
-            res = pd.concat([res, pd.DataFrame(resp.json())], axis=0, ignore_index=True)
+            res = pd.concat(
+                [res, pd.DataFrame(resp.json())],
+                axis=0,
+                ignore_index=True
+            )
             limit -= limit_delta
             start_t += limit_delta * self.__tf_minutes * 60000
             time_delta = datetime.now() - query_second
             sleep(max(0, 0.5 - time_delta.microseconds / 1000000))
             with open(self.__settings['log_file'], 'a') as f:
-                print(f"Loaded {limit_delta} rows, {datetime.now() - query_second} time spent, left {limit} rows", file=f)
+                print(
+                    f"Loaded {limit_delta} rows,",
+                    f"{datetime.now() - query_second} time spent,",
+                    f"left {limit} rows",
+                    file=f,
+                )
         return res
 
-    def __get_response(self, start_t: int, limit: int) -> requests.models.Response:
+    def __get_response(
+        self,
+        start_t: int,
+        limit: int
+    ) -> requests.models.Response:
         tries = 5
         secs = 1
         while tries > 0:
@@ -122,14 +143,20 @@ class Parser:
             }
             r = requests.get(url, params=params)
             if r.status_code == 200:
-                if not self.ignore_gaps and pd.DataFrame(r.json()).shape[0] != limit:
-                    sz = pd.DataFrame(r.json()).shape[0]
-                    raise RequestError(f'Get klines response size is {sz}, Limit is {limit}')
+                sz = pd.DataFrame(r.json()).shape[0]
+                if not self.ignore_gaps and sz != limit:
+                    raise RequestError(
+                        f"Get klines response size is {sz},",
+                        f"Limit is {limit}"
+                    )
                 return r
             elif r.status_code // 100 == 5:
                 error_code = str(r.status_code)
                 with open(self.__settings['log_file'], 'a') as f:
-                    print(f'\n\n\nERROR!!!!\n{error_code} \n{r.json()}\n\n', file=f)
+                    print(
+                        f'\n\n\nERROR!!!!\n{error_code} \n{r.json()}\n\n',
+                        file=f
+                    )
                 sleep(secs)
                 secs *= 1.5
                 tries -= 1

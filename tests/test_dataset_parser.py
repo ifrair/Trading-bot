@@ -8,9 +8,8 @@ from bot.exceptions import RequestError, ResponseError
 from bot.utiles import tf_to_minutes
 
 
-
 class Test(unittest.TestCase):
-
+    # function to mock requests
     def __mocked_response(*args, **kwargs):
         class MockResponse:
             def __init__(self, json_data, status_code):
@@ -21,8 +20,10 @@ class Test(unittest.TestCase):
                 return self.json_data
 
         if 'https://api.binance.com' in args[0]:
+            # fail of server
             if kwargs["params"]["symbol"] == "fail_500":
                 return MockResponse([], 500)
+            # fail of request
             if kwargs["params"]["symbol"] == "fail_300":
                 return MockResponse([], 300)
             return MockResponse(
@@ -42,35 +43,55 @@ class Test(unittest.TestCase):
                         "28.46694368",      # Taker buy quote asset volume
                         "0"                 # Unused field, ignore.
                     ]
-                ]
-                , 200
+                ],
+                200
             )
 
         return MockResponse(None, 404)
 
+    # checks correct get_table request
     @patch('bot.dataset_parser.sleep')
     @patch('bot.dataset_parser.datetime')
     @patch('bot.dataset_parser.requests.get', side_effect=__mocked_response)
     def test_get_table(self, send_request_mock, now_mock, _):
         now_mock.now.return_value = parse_dt("2023-01-20T00:00:00")
-        # check correct
+
         for tf in ['1m', '5m', '1h']:
             parser = Parser('SOLUSDT', tf, ignore_gaps=True)
-            for args in [["2023-01-15T00:00:00", "2023-01-20T00:00:00"], [5 * 24 * 60 // tf_to_minutes(tf)]]:
+            for args in [
+                ["2023-01-15T00:00:00", "2023-01-20T00:00:00"],
+                [5 * 24 * 60 // tf_to_minutes(tf)]
+            ]:
                 table = parser.get_table(*args)
-                self.assertEqual(table.shape[0], len(send_request_mock.call_args_list), f"{tf}, {args}")
+                self.assertEqual(
+                    table.shape[0],
+                    len(send_request_mock.call_args_list),
+                    f"{tf}, {args}"
+                )
 
-                sum_limit = sum(int(call[1]['params']['limit']) for call in send_request_mock.call_args_list)
-                self.assertEqual(sum_limit, 5 * 24 * 60 // tf_to_minutes(tf), f"{tf}, {args}")
+                sum_limit = sum(
+                    int(call[1]['params']['limit'])
+                    for call in send_request_mock.call_args_list
+                )
+                self.assertEqual(
+                    sum_limit,
+                    5 * 24 * 60 // tf_to_minutes(tf),
+                    f"{tf}, {args}"
+                )
 
                 priv_time = "1673740800000"
                 for call in send_request_mock.call_args_list:
-                    self.assertEqual(priv_time, call[1]['params']['startTime'], f"{tf}, {args}")
+                    self.assertEqual(
+                        priv_time,
+                        call[1]['params']['startTime'],
+                        f"{tf}, {args}"
+                    )
                     priv_time = call[1]['params']['endTime']
                 self.assertEqual(priv_time, "1674172800000", f"{tf}, {args}")
 
                 send_request_mock.call_args_list = []
 
+    # checks fail get_table request
     @patch('bot.dataset_parser.sleep')
     @patch('bot.dataset_parser.requests.get', side_effect=__mocked_response)
     def test_exc(self, send_request_mock, _):
