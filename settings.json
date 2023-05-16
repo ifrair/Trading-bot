@@ -9,7 +9,7 @@
     },
     "trader": {
         "log_file": "log_trader.txt",
-        "indicators": ["CCI", "RSI"],
+        "indicators": ["ALL"],
         "indicator_window": 12,
         "print_friq": 10,
         "slippage": 0.01,

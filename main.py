@@ -26,14 +26,15 @@ with open("settings.json", 'r') as f:
     settings = json.load(f)["main"]
 
 def download_data():
-    table = Parser('BTCUSDT', '1m', ignore_gaps=True).get_table("2023-01-15T17:00:00", "2023-01-16T00:00:00")
+    # table = Parser('BTCUSDT', '1m', ignore_gaps=True).get_table("2023-01-15T17:00:00", "2023-01-16T00:00:00")
     # table = Parser('BTCUSDT', '1m', settings["timezone"]).get_table("2023-04-12T12:20:00", 1)
     # table.to_csv('data.csv', mode='a', index=False)
     # table.iloc[:50000].to_csv('data/data_small.csv', index=False)
     # table[['Open', 'Close', 'Middle', 'Low', 'High', 'Volume usd', 'CCI']].to_csv('data.csv')
     # table[['Next Close']].to_csv('Y.csv')
     # print(table)
-    Indicators().calc_indicators(table, ['CCI', 'RSI'], True)
+    table = pd.read_csv("data/data_small.csv").iloc[:300]
+    Indicators().calc_indicators(table, drop_first=True)
     draw_dataset(table)
     table.to_csv('data/data.csv', index=False)
     return table

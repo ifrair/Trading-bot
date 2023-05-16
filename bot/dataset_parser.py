@@ -6,7 +6,6 @@ from multipledispatch import dispatch
 # from pandarallel import pandarallel
 from time import sleep
 
-import copy
 import json
 import pandas as pd
 import requests

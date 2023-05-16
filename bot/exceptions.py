@@ -3,3 +3,6 @@ class ResponseError(Exception):
 
 class RequestError(Exception):
     pass
+
+class WrongIndicator(Exception):
+    pass
