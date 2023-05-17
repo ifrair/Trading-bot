@@ -1,3 +1,4 @@
+from bot.analyzer import Analyzer
 from bot.drawer import draw_dataset
 from bot.dataset_parser import Parser
 from bot.exceptions import ResponseError
@@ -25,6 +26,25 @@ with open("settings.json", 'r') as f:
     settings = json.load(f)["main"]
 
 
+# function to calculate effectiveness of strategy
+def analyze():
+    table = pd.read_csv("data/data_EOS_1m.csv").iloc[-10000:]
+    Indicators().calc_indicators(table, drop_first=True)
+    results = Analyzer().analyze(
+        table=table,
+        strategy_name="CCI",
+        commission=1e-3,
+    )
+    print(
+        f"Average profit: {results['avg_profit']}",
+        f"Sum order size: {results['orders_size']}",
+        f"Number of orders: {results['num_orders']}",
+        f"Profit with commission: {results['com_profit']}",
+        f"Total profit: {results['total_profit']}",
+        sep=",\n",
+    )
+
+
 # function to download data from market
 def download_data():
     parser = Parser(
@@ -44,11 +64,11 @@ def download_data():
 
 # function to load data and run simulator
 def simulate():
-    df = pd.read_csv("data/data_SOL_5m.csv")
+    df = pd.read_csv("data/data_BTC_5m.csv")
     Indicators().calc_indicators(df, drop_first=True)
     df_y = df[["Next Close", "Close Delta"]]
     df_x = df.drop(columns=["Next Close", "Close Delta"])
-    Simulator(df_x.iloc[:4000], df_y.iloc[:4000]).simulate()
+    Simulator(df_x.iloc[-2900:], df_y.iloc[-2900:]).simulate()
 
 
 # function to run all the tests
@@ -92,4 +112,5 @@ def trade():
         sleep(300)
         print_logs("Restartng")
 
-trade()
+
+analyze()

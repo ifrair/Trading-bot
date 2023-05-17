@@ -19,8 +19,8 @@
     },
     "strategist": {
         "CCI": {
-            "CCI_max": 1,
-            "CCI_min": -1
+            "CCI_max": 100,
+            "CCI_min": -100
         },
         "SGD": {
             "fit_table": "data/data_BTC_1m.csv"

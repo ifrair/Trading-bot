@@ -9,7 +9,6 @@ from multipledispatch import dispatch
 
 import json
 import math
-import pandas as pd
 
 
 class Trader:
@@ -149,14 +148,20 @@ class Trader:
             if filter['filterType'] == 'LOT_SIZE':
                 stepSize = float(filter['stepSize'])
                 minQty = float(filter['minQty'])
-                self.__min_amount_first = max(minQty, self.__min_amount_first)
+                self.__min_amount_first = max(
+                    minQty,
+                    self.__min_amount_first
+                )
                 self.__min_amount_second = max(
                     minQty * price * 2,
                     self.__min_amount_second
                 )
             elif filter['filterType'] == 'NOTIONAL':
                 minNotional = float(filter['minNotional'])
-                self.__min_amount_second = max(minNotional, self.__min_amount_second)
+                self.__min_amount_second = max(
+                    minNotional,
+                    self.__min_amount_second
+                )
                 self.__min_amount_first = max(
                     minNotional / price * 2,
                     self.__min_amount_first
@@ -167,8 +172,10 @@ class Trader:
         with open(self.__settings['log_file'], 'a') as f:
             print(
                 f"Symbol precision set to {self.__symbol_precision}",
-                f"Minimal {self.first_asset} set to {self.__min_amount_first}",
-                f"Minimal {self.second_asset} set to {self.__min_amount_second}",
+                f"Minimal {self.first_asset} set to "
+                f"{self.__min_amount_first}",
+                f"Minimal {self.second_asset} set to "
+                f"{self.__min_amount_second}",
                 file=f,
                 sep=',\n'
             )
