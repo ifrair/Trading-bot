@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.parser import parse as dt_parse
 from multipledispatch import dispatch
 from time import sleep
@@ -34,5 +34,6 @@ def wait_till(end_time: datetime) -> None:
     """
     :param end_time: wait till time
     """
-    while datetime.now() < end_time:
-        sleep(0.1)
+    delta = end_time - datetime.now() + timedelta(milliseconds=1)
+    if delta > timedelta(0):
+        sleep(delta.total_seconds())

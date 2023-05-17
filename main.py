@@ -28,17 +28,17 @@ with open("settings.json", 'r') as f:
 # function to download data from market
 def download_data():
     parser = Parser(
-        'BTCUSDT',
-        '1m',
-        timezone=settings["timezone"],
+        'EOSUSDT',
+        '15m',
+        # timezone=settings["timezone"],
         ignore_gaps=True,
     )
-    # table = parser.get_table("2023-01-15T17:00:00", "2023-01-16T00:00:00")
-    table = parser.get_table("2023-04-12T12:20:00", 1)
+    table = parser.get_table("2020-01-01T00:00:00", "2023-05-15T00:00:00")
+    # table = parser.get_table("2023-04-12T12:20:00", 1)
     # table = pd.read_csv("data/data_small.csv").iloc[:300]
     Indicators().calc_indicators(table, drop_first=True)
     draw_dataset(table)
-    table.to_csv('data/data.csv', index=False)
+    table.to_csv('data/data_EOSUSDT_15m.csv', index=False)
     return table
 
 
@@ -92,5 +92,4 @@ def trade():
         sleep(300)
         print_logs("Restartng")
 
-
-test()
+trade()

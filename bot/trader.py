@@ -1,5 +1,6 @@
 from bot.dataset_parser import Parser
 from bot.indicators import Indicators
+from bot.strategist import get_strategy
 from bot.utiles import wait_till, tf_to_minutes, time_to_int
 
 from binance.spot import Spot
@@ -46,7 +47,9 @@ class Trader:
         self.__parser = Parser(self.symb, tf, timezone)
         self.__tf_minutes = tf_to_minutes(tf)
         self.__update_settings()
-        self.__update_symb_precision()
+        # cleaning logs
+        f = open(self.__settings["log_file"], 'w')
+        f.close()
 
     # function to start infinite loop to trade every timeframe minutes
     def trade(self) -> None:
@@ -63,58 +66,58 @@ class Trader:
                 )
 
         self.__update_settings()
-        self.__update_balances()
-        # cleaning logs
-        f = open(self.__settings["log_file"], 'w')
-        f.close()
+        strategy = get_strategy(self.__settings['strategy'])
+        indicators = Indicators(self.__settings['indicator_window'])
+        self.__update_symb_precision(
+            self.__parser.get_table(1).iloc[-1]['Close']
+        )
+
         # updating start time
         start_time = datetime.now() + timedelta(minutes=self.__tf_minutes)
         start_time -= timedelta(
             minutes=time_to_int(start_time) // 60000 % self.__tf_minutes,
         )
         start_time -= timedelta(seconds=start_time.second)
+
         print_state(
-            f"Start time: {start_time},"
-            f"Timeframe {self.__tf_minutes} mins, "
-            f"Simbol {self.symb}"
+            f"Start time: {start_time}, "
+            f"Timeframe: {self.__tf_minutes} mins, "
+            f"Simbol: {self.symb}, "
+            f"Strategy: {self.__settings['strategy']}"
         )
 
-        wait_till(start_time)
-        # getting rows to calculate indicators
-        table = self.__parser.get_table(100)
-
-        indicators = Indicators(self.__settings["indicator_window"])
         step = 0
         while True:
-            if step % self.__settings["print_friq"] == 0:
-                print_state()
             step += 1
-            indicators.calc_indicators(table, self.__settings["indicators"])
+            wait_till(start_time)
+            # getting rows to calculate indicators
+            table = self.__parser.get_table(
+                self.__settings['num_stored_rows']
+            )
+            indicators.calc_indicators(
+                table,
+                self.__settings['indicators'],
+                drop_first=True
+            )
             self.__update_balances()
 
-            borders = (
-                self.__settings["strategy"]["CCI_min"],
-                self.__settings["strategy"]["CCI_max"]
-            )
-            if table.iloc[-1]["CCI"] > borders[1]:
+            prediction = strategy.predict(table)
+            if prediction > 0:
+                self.__buy(2, prediction * self.__first_balance)
+            elif prediction < 0:
+                self.__buy(1, -prediction * self.__second_balance)
+
+            if step % self.__settings['refresh_friq'] == 0:
+                self.__update_settings()
+                self.__update_symb_precision(table.iloc[-1]['Close'])
                 print_state()
-                self.__buy(2)
-            elif table.iloc[-1]["CCI"] < borders[0]:
-                print_state()
-                self.__buy(1)
 
             start_time += timedelta(minutes=self.__tf_minutes)
-            wait_till(start_time)
-            table = pd.concat(
-                [table, self.__parser.get_table(1)],
-                axis=0,
-                ignore_index=True
-            )[-100:].reset_index(drop=True)
 
     # updating settings from .json file
     def __update_settings(self) -> None:
         with open(self.__settings_file, 'r') as f:
-            self.__settings = json.load(f)["trader"]
+            self.__settings = json.load(f)['trader']
 
     # updating balance making query to market
     def __update_balances(self) -> None:
@@ -134,19 +137,41 @@ class Trader:
         self.__second_balance = max(0, self.__second_balance - self.__income)
 
     # updating market assets precisions to use in queries
-    def __update_symb_precision(self) -> None:
+    def __update_symb_precision(self, price: float) -> None:
+        """
+        :param price: curent symbol price
+        """
         symbol_info = self.client.exchange_info(symbol=self.symb)
         stepSize = 0.0
+        self.__min_amount_first = -1
+        self.__min_amount_second = -1
         for filter in symbol_info['symbols'][0]['filters']:
             if filter['filterType'] == 'LOT_SIZE':
                 stepSize = float(filter['stepSize'])
-                self.__min_amount_first = float(filter['minQty'])
+                minQty = float(filter['minQty'])
+                self.__min_amount_first = max(minQty, self.__min_amount_first)
+                self.__min_amount_second = max(
+                    minQty * price * 2,
+                    self.__min_amount_second
+                )
             elif filter['filterType'] == 'NOTIONAL':
-                self.__min_amount_second = float(filter['minNotional'])
+                minNotional = float(filter['minNotional'])
+                self.__min_amount_second = max(minNotional, self.__min_amount_second)
+                self.__min_amount_first = max(
+                    minNotional / price * 2,
+                    self.__min_amount_first
+                )
+
         self.__symbol_precision = int(round(-math.log(stepSize, 10), 0))
 
-        with open(self.__settings["log_file"], 'a') as f:
-            print(f'Symbol precision set to {self.__symbol_precision}', file=f)
+        with open(self.__settings['log_file'], 'a') as f:
+            print(
+                f"Symbol precision set to {self.__symbol_precision}",
+                f"Minimal {self.first_asset} set to {self.__min_amount_first}",
+                f"Minimal {self.second_asset} set to {self.__min_amount_second}",
+                file=f,
+                sep=',\n'
+            )
 
     # buing to all money
     @dispatch(int)
@@ -170,21 +195,27 @@ class Trader:
         :param money: amount of another asset to spend
         """
         def get_income(money: int) -> None:
-            income_delta = money * self.__settings["withdrawal_coef"]
+            money *= (1 - self.__settings['slippage'])
+            income_delta = money * self.__settings['withdrawal_coef']
             self.__income += income_delta
             money -= income_delta
-            money = int(money * pow(10, self.__symbol_precision)) / \
-                pow(10, self.__symbol_precision)
+            precision_coef = pow(10, self.__symbol_precision)
+            money = int(money * precision_coef) / precision_coef
+            return money
 
         if asset_num == 1:
-            money = min(self.__second_balance, money) * \
-                (1 - self.__settings["slippage"])
-            get_income(money)
+            money = min(self.__second_balance, money)
+            money = get_income(money)
             if money < self.__min_amount_second:
                 return
 
-            with open(self.__settings["log_file"], 'a') as f:
-                print(f"Sell {money} {self.second_asset}", file=f)
+            with open(self.__settings['log_file'], 'a') as f:
+                print(
+                    f"Time: {datetime.now()}, ",
+                    f"Sell {money} {self.second_asset}",
+                    file=f,
+                )
+
             _ = self.client.new_order(
                 symbol=self.symb,
                 # newClientOrderId="Test_0",
@@ -192,15 +223,20 @@ class Trader:
                 type='MARKET',
                 quoteOrderQty=money,
             )
+            self.__second_balance -= money
         else:
-            money = min(self.__first_balance, money) * \
-                (1 - self.__settings["slippage"])
-            get_income(money)
+            money = min(self.__first_balance, money)
+            money = get_income(money)
             if money < self.__min_amount_first:
                 return
 
-            with open(self.__settings["log_file"], 'a') as f:
-                print(f"Sell {money} {self.first_asset}", file=f)
+            with open(self.__settings['log_file'], 'a') as f:
+                print(
+                    f"Time: {datetime.now()}, ",
+                    f"Sell {money} {self.first_asset}",
+                    file=f,
+                )
+
             _ = self.client.new_order(
                 symbol=self.symb,
                 # newClientOrderId="Test_0",
@@ -208,3 +244,4 @@ class Trader:
                 type='MARKET',
                 quantity=money,
             )
+            self.__first_balance -= money

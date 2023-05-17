@@ -8,16 +8,22 @@
         "batch_size": 1000
     },
     "trader": {
-        "log_file": "log_trader.txt",
         "indicators": ["ALL"],
         "indicator_window": 12,
-        "print_friq": 10,
+        "log_file": "log_trader.txt",
+        "num_stored_rows": 200,
+        "refresh_friq": 10,
         "slippage": 0.01,
-        "withdrawal_coef": 0,
-        "strategy": {
-            "risk_coef": 0,
-            "CCI_min": -1,
-            "CCI_max": 1
+        "strategy": "CCI",
+        "withdrawal_coef": 0
+    },
+    "strategist": {
+        "CCI": {
+            "CCI_max": 1,
+            "CCI_min": -1
+        },
+        "SGD": {
+            "fit_table": "data/data_BTC_1m.csv"
         }
     }
 }
