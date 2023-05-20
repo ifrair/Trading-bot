@@ -44,15 +44,15 @@ class Trader:
         self.__is_first_asset_given = (first_asset is not None)
         self.second_asset = second_asset
         self.__is_second_asset_given = (second_asset is not None)
-        self.symb = first_asset + second_asset
         self.__is_tf_given = (tf is not None)
         if self.__is_tf_given:
+            self.tf = tf
             self.__tf_minutes = tf_to_minutes(tf)
         self.__update_settings()
         # cleaning logs
         f = open(self.__settings["log_file"], 'w')
         f.close()
-        self.__parser = Parser(self.symb, tf, timezone)
+        self.__parser = Parser(self.symb, self.tf, timezone)
 
     def trade(self) -> None:
         """Function to start infinite loop to trade every timeframe minutes"""
@@ -127,7 +127,9 @@ class Trader:
         if not self.__is_second_asset_given:
             self.second_asset = self.__settings['second_asset']
         if not self.__is_tf_given:
-            self.__tf_minutes = tf_to_minutes(self.__settings['timeframe'])
+            self.tf = self.__settings['timeframe']
+            self.__tf_minutes = tf_to_minutes(self.tf)
+        self.symb = self.first_asset + self.second_asset
 
     def __update_balances(self) -> None:
         """Updating balance making query to market"""

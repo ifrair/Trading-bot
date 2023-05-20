@@ -51,9 +51,7 @@ class Indicators:
         :param df: dataframe to calculate indicator
         """
         self.__calc_CLV(df)
-        df['ADI'] = 0
-        for i in range(self.window):
-            df['ADI'] += df['CLV'].shift(i).fillna(0)
+        df['ADI'] = df['CLV'].rolling(window=self.window).sum()
         self.__calc_EMA(df, 'ADI')
 
     def calc_CCI(self, df: pd.DataFrame) -> None:
@@ -106,9 +104,7 @@ class Indicators:
         """
         close_priv = df['Close'].shift(1).fillna(0)
         df_temp = df['Volume coin'] * (df['Close'] - close_priv) / close_priv
-        df['PVT'] = 0
-        for i in range(self.window):
-            df['PVT'] += df_temp.shift(i).fillna(0)
+        df['PVT'] = df_temp.rolling(window=self.window).sum().fillna(0)
         self.__calc_CA(df, 'PVT')
 
     def calc_RSI(self, df: pd.DataFrame) -> None:
@@ -129,9 +125,8 @@ class Indicators:
         :param param_name: param to calculate camulative avarage
         """
         ca_name = param_name + 'CA'
-        df[ca_name] = 0
-        for i in range(self.window):
-            df[ca_name] += df[param_name].shift(i).fillna(0)
+        rolling = df[param_name].rolling(window=self.window)
+        df[ca_name] = rolling.sum().fillna(0)
         df[ca_name] /= self.window
 
     def __calc_EMA(
@@ -198,9 +193,7 @@ class Indicators:
             return
         self.__calc_SMA(df)
         df_temp = (df['TP'] - df['SMA'] + 0.1**10).abs()
-        df['MAD'] = df_temp
-        for i in range(1, self.window):
-            df['MAD'] += df_temp.shift(i).fillna(0)
+        df['MAD'] = df_temp.rolling(window=self.window).sum().fillna(0)
         df['MAD'] /= self.window
 
     def __calc_MR(self, df: pd.DataFrame) -> None:
@@ -216,11 +209,8 @@ class Indicators:
         TP_delta = df['TP'] - df['TP'].shift(1).fillna(0)
         PMF[TP_delta < 0] = 0
         NMF[TP_delta >= 0] = 0
-        PMFS = PMF
-        NMFS = NMF
-        for i in range(1, self.window):
-            PMFS += PMF.shift(i).fillna(0)
-            NMFS += NMF.shift(i).fillna(0)
+        PMFS = PMF.rolling(window=self.window).sum().fillna(0)
+        NMFS = NMF.rolling(window=self.window).sum().fillna(0)
         df['MR'] = PMFS / NMFS
 
     def __calc_SMA(self, df: pd.DataFrame) -> None:
@@ -231,9 +221,7 @@ class Indicators:
         if 'SMA' in df.columns:
             return
         self.__calc_TP(df)
-        df['SMA'] = df['TP']
-        for i in range(1, self.window):
-            df['SMA'] += df['TP'].shift(i).fillna(0)
+        df['SMA'] = df['TP'].rolling(window=self.window).sum().fillna(0)
         df['SMA'] /= self.window
 
     def __calc_TP(self, df: pd.DataFrame) -> None:

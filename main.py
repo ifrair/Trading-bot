@@ -94,8 +94,8 @@ def trade():
 
     try:
         with open('creds.txt', 'r') as f:
-            api_key = f.readline()
-            sec_key = f.readline()
+            api_key = f.readline()[:-1]
+            sec_key = f.readline()[:-1]
     except IOError:
         api_key = input("Enter api key:\n")
         sec_key = input("Enter secure key:\n")
@@ -128,4 +128,4 @@ def trade():
         print_logs(f"Restartng, Try number: {tries}")
 
 
-trade()
+test()
