@@ -7,7 +7,7 @@ from bot.utiles import tf_to_minutes, time_to_int
 
 class Test(unittest.TestCase):
     def test_utiles(self):
-        # tf_to_minutes check
+        """tf_to_minutes check"""
         self.assertEqual(tf_to_minutes("123m"), 123)
         self.assertEqual(tf_to_minutes("15h"), 15 * 60)
         self.assertEqual(tf_to_minutes("100d"), 100 * 24 * 60)

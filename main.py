@@ -5,11 +5,10 @@ from bot.exceptions import ResponseError
 from bot.indicators import Indicators
 from bot.simulator import Simulator
 from bot.trader import Trader
-
-import creds
+from bot.utiles import tf_to_minutes
 
 from binance.error import ClientError
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
 import json
@@ -26,9 +25,12 @@ with open("settings.json", 'r') as f:
     settings = json.load(f)["main"]
 
 
-# function to calculate effectiveness of strategy
 def analyze():
-    table = pd.read_csv("data/data_EOS_1m.csv").iloc[-10000:]
+    """Function to calculate effectiveness of strategy"""
+    symb = 'EOS'
+    tf = '1m'
+    num_rows = 10000
+    table = pd.read_csv(f'data/data_{symb}_{tf}.csv').iloc[-num_rows:]
     Indicators().calc_indicators(table, drop_first=True)
     results = Analyzer().analyze(
         table=table,
@@ -41,38 +43,39 @@ def analyze():
         f"Number of orders: {results['num_orders']}",
         f"Profit with commission: {results['com_profit']}",
         f"Total profit: {results['total_profit']}",
+        f"Time period: {timedelta(minutes=tf_to_minutes(tf)*num_rows)}",
         sep=",\n",
     )
 
 
-# function to download data from market
 def download_data():
+    """Function to download data from market"""
     parser = Parser(
         'EOSUSDT',
-        '15m',
+        '1m',
         # timezone=settings["timezone"],
         ignore_gaps=True,
     )
     table = parser.get_table("2020-01-01T00:00:00", "2023-05-15T00:00:00")
     # table = parser.get_table("2023-04-12T12:20:00", 1)
-    # table = pd.read_csv("data/data_small.csv").iloc[:300]
+    # table = pd.read_csv("data/data_BTC_1d.csv").iloc[:300]
     Indicators().calc_indicators(table, drop_first=True)
     draw_dataset(table)
-    table.to_csv('data/data_EOSUSDT_15m.csv', index=False)
+    table.to_csv('data/data_EOS_1m.csv', index=False)
     return table
 
 
-# function to load data and run simulator
 def simulate():
-    df = pd.read_csv("data/data_BTC_5m.csv")
+    """Function to load data and run simulator"""
+    df = pd.read_csv("data/data_EOS_1m.csv")
     Indicators().calc_indicators(df, drop_first=True)
     df_y = df[["Next Close", "Close Delta"]]
     df_x = df.drop(columns=["Next Close", "Close Delta"])
-    Simulator(df_x.iloc[-2900:], df_y.iloc[-2900:]).simulate()
+    Simulator(df_x.iloc[-9900:], df_y.iloc[-9900:]).simulate()
 
 
-# function to run all the tests
 def test():
+    """Function to run all the tests"""
     loader = unittest.TestLoader()
     start_dir = 'tests/'
     suite = loader.discover(start_dir)
@@ -80,23 +83,31 @@ def test():
     runner.run(suite)
 
 
-# function to start trading
 def trade():
+    """Function to start trading"""
     def print_logs(msg: str) -> None:
-        with open(settings["log_file"], 'a') as f:
+        with open(settings['log_file'], 'a') as f:
             print(f"{msg}, {datetime.now()}", file=f)
 
-    f = open(settings["log_file"], 'w')
+    f = open(settings['log_file'], 'w')
     f.close()
 
-    trader = Trader(
-        creds.api_key,
-        creds.sec_key,
-        first_asset="BTC",
-        second_asset="USDT",
-        timezone=settings["timezone"],
-    )
+    try:
+        with open('creds.txt', 'r') as f:
+            api_key = f.readline()
+            sec_key = f.readline()
+    except IOError:
+        api_key = input("Enter api key:\n")
+        sec_key = input("Enter secure key:\n")
+        with open('creds.txt', 'w') as f:
+            print(api_key, sec_key, file=f, sep='\n')
 
+    trader = Trader(
+        api_key,
+        sec_key,
+        timezone=settings['timezone'],
+    )
+    tries = 1
     while True:
         try:
             print_logs("Start trading")
@@ -107,10 +118,14 @@ def trade():
         except ClientError as e:
             print_logs(f"Trader error:\n{e.error_code},\n{e.error_message}")
         except Exception as e:
-            print_logs(f"Critical error:\n{repr(e)}")
+            print_logs(f"Critical error:\n{repr(e)}\nClosing...")
             raise
+        tries += 1
+        if tries > settings['num_fail_tries']:
+            print_logs("Too many tries. Closing...")
+            return
         sleep(300)
-        print_logs("Restartng")
+        print_logs(f"Restartng, Try number: {tries}")
 
 
-analyze()
+trade()

@@ -14,7 +14,6 @@ class Indicators:
         """
         self.window = window
 
-    # adds indicators from the list and indicators for their calculation
     def calc_indicators(
         self,
         df: pd.DataFrame,
@@ -22,6 +21,8 @@ class Indicators:
         drop_first: bool = False
     ) -> None:
         """
+        Adds indicators from list and
+        auxiliary indicators for their calculation
         :param df: dataframe to calculate indicators
         :param indicators: list of needed indicators
         :param drop_first: flag to drop first probably uncorrect columns
@@ -44,9 +45,9 @@ class Indicators:
 
     # ---------------------------------------------------- Main indicators
 
-    # index ADI + ADIEMA + CLV
     def calc_ADI(self, df: pd.DataFrame) -> None:
         """
+        index ADI + ADIEMA + CLV
         :param df: dataframe to calculate indicator
         """
         self.__calc_CLV(df)
@@ -55,17 +56,17 @@ class Indicators:
             df['ADI'] += df['CLV'].shift(i).fillna(0)
         self.__calc_EMA(df, 'ADI')
 
-    # index CCI + SMA + MAD + TP
     def calc_CCI(self, df: pd.DataFrame) -> None:
         """
+        index CCI + SMA + MAD + TP
         :param df: dataframe to calculate indicator
         """
         self.__calc_MAD(df)
         df['CCI'] = (df['TP'] - df['SMA']) / df['MAD'] / 0.015
 
-    # index MACD + MACDEMA
     def calc_MACD(self, df: pd.DataFrame) -> None:
         """
+        index MACD + MACDEMA
         :param df: dataframe to calculate indicator
         """
         self.__calc_EMA(df, 'Close')
@@ -76,17 +77,17 @@ class Indicators:
         df['MACD'] = EMA1 - df['MACD']
         self.__calc_EMA(df, 'MACD', self.window * 3 // 4)
 
-    # index MFI + TP + MR
     def calc_MFI(self, df: pd.DataFrame) -> None:
         """
+        index MFI + TP + MR
         :param df: dataframe to calculate indicator
         """
         self.__calc_MR(df)
         df['MFI'] = 100 - 100 / (1 + df['MR'])
 
-    # index OBV + OBVCA
     def calc_OBV(self, df: pd.DataFrame) -> None:
         """
+        index OBV + OBVCA
         :param df: dataframe to calculate indicator
         """
         df['OBV'] = 0
@@ -98,9 +99,9 @@ class Indicators:
             df['OBV'] += close_delta * df['Volume coin'].shift(i).fillna(0)
         self.__calc_CA(df, 'OBV')
 
-    # index PVT + PVTCA
     def calc_PVT(self, df: pd.DataFrame) -> None:
         """
+        index PVT + PVTCA
         :param df: dataframe to calculate indicator
         """
         close_priv = df['Close'].shift(1).fillna(0)
@@ -110,9 +111,9 @@ class Indicators:
             df['PVT'] += df_temp.shift(i).fillna(0)
         self.__calc_CA(df, 'PVT')
 
-    # index RSI + RS + EMA + EMAU + EMAD
     def calc_RSI(self, df: pd.DataFrame) -> None:
         """
+        index RSI + RS + EMA + EMAU + EMAD
         :param df: dataframe to calculate indicator
         """
         self.__calc_EMAUD(df)
@@ -121,9 +122,9 @@ class Indicators:
 
     # ---------------------------------------------------- Moving averages
 
-    # index *CA
     def __calc_CA(self, df: pd.DataFrame, param_name: str) -> None:
         """
+        index *CA
         :param df: dataframe to calculate indicator
         :param param_name: param to calculate camulative avarage
         """
@@ -133,7 +134,6 @@ class Indicators:
             df[ca_name] += df[param_name].shift(i).fillna(0)
         df[ca_name] /= self.window
 
-    # index *EMA
     def __calc_EMA(
         self,
         df: pd.DataFrame,
@@ -141,6 +141,7 @@ class Indicators:
         window: int = None
     ) -> None:
         """
+        index *EMA
         :param df: dataframe to calculate indicator
         :param param_name: param to calculate camulative avarage
         """
@@ -159,9 +160,9 @@ class Indicators:
 
     # ---------------------------------------------------- Auxiliary indicators
 
-    # index CLV
     def __calc_CLV(self, df: pd.DataFrame) -> None:
         """
+        index CLV
         :param df: dataframe to calculate indicator
         """
         if 'CLV' in df.columns:
@@ -170,9 +171,9 @@ class Indicators:
             (2 * df['Close'] - df['Low'] - df['High']) / \
             (df['High'] - df['Low'])
 
-    # index EMA + EMAU + EMAD
     def __calc_EMAUD(self, df: pd.DataFrame) -> None:
         """
+        index EMA + EMAU + EMAD
         :param df: dataframe to calculate indicator
         """
         if 'EMA' in df.columns:
@@ -188,9 +189,9 @@ class Indicators:
             df[index] = df[index + 'EMA']
             df.drop([index + 'EMA'], axis=1, inplace=True)
 
-    # index MAD + SMA + TP
     def __calc_MAD(self, df: pd.DataFrame) -> None:
         """
+        index MAD + SMA + TP
         :param df: dataframe to calculate indicator
         """
         if 'MAD' in df.columns:
@@ -202,9 +203,9 @@ class Indicators:
             df['MAD'] += df_temp.shift(i).fillna(0)
         df['MAD'] /= self.window
 
-    # index MR
     def __calc_MR(self, df: pd.DataFrame) -> None:
         """
+        index MR
         :param df: dataframe to calculate indicator
         """
         if 'MR' in df.columns:
@@ -222,9 +223,9 @@ class Indicators:
             NMFS += NMF.shift(i).fillna(0)
         df['MR'] = PMFS / NMFS
 
-    # index SMA + TP
     def __calc_SMA(self, df: pd.DataFrame) -> None:
         """
+        index SMA + TP
         :param df: dataframe to calculate indicator
         """
         if 'SMA' in df.columns:
@@ -235,9 +236,9 @@ class Indicators:
             df['SMA'] += df['TP'].shift(i).fillna(0)
         df['SMA'] /= self.window
 
-    # index TP
     def __calc_TP(self, df: pd.DataFrame) -> None:
         """
+        index TP
         :param df: dataframe to calculate indicator
         """
         if 'TP' in df.columns:

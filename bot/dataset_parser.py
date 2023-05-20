@@ -68,6 +68,7 @@ class Parser:
         :param start_t: start time
         :param limit: num candles from start
         """
+        self.__update_settings()
         with open(self.__settings['log_file'], 'a') as f:
             print("Start time:", start_t, "Limit: ", limit, file=f)
         resp = self.__get_table(
@@ -95,7 +96,7 @@ class Parser:
         return df
 
     def __get_table(self, start_t: int, limit: int) -> pd.DataFrame:
-        # round up
+        # rounding
         start_t //= (self.__tf_minutes * 60000)
         start_t *= (self.__tf_minutes * 60000)
         with open(self.__settings['log_file'], 'a') as f:
@@ -113,7 +114,11 @@ class Parser:
             limit -= limit_delta
             start_t += limit_delta * self.__tf_minutes * 60000
             time_delta = datetime.now() - query_second
-            sleep(max(0, 0.5 - time_delta.microseconds / 1000000))
+            sleep(max(
+                0,
+                self.__settings['sleep_time'] -
+                time_delta.microseconds / 1000000
+            ))
             with open(self.__settings['log_file'], 'a') as f:
                 print(
                     f"Loaded {limit_delta} rows,",
@@ -128,7 +133,7 @@ class Parser:
         start_t: int,
         limit: int
     ) -> requests.models.Response:
-        tries = 5
+        tries = self.__settings['num_fail_tries']
         secs = 1
         while tries > 0:
             base = "https://api.binance.com"
@@ -150,7 +155,7 @@ class Parser:
                         f"Limit is {limit}"
                     )
                 return r
-            elif r.status_code // 100 == 5:
+            elif r.status_code // 100 == 5 or r.status_code in [408, 417]:
                 error_code = str(r.status_code)
                 with open(self.__settings['log_file'], 'a') as f:
                     print(

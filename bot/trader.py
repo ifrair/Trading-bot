@@ -22,9 +22,9 @@ class Trader:
         self,
         api_key: str,
         sec_key: str,
-        first_asset: str = "BTC",
-        second_asset: str = "USDT",
-        tf: str = "1m",
+        first_asset: str = None,
+        second_asset: str = None,
+        tf: str = None,
         timezone: int = 0
     ):
         """
@@ -41,17 +41,21 @@ class Trader:
             # proxies={ 'https': creds.proxy }
         )
         self.first_asset = first_asset
+        self.__is_first_asset_given = (first_asset is not None)
         self.second_asset = second_asset
+        self.__is_second_asset_given = (second_asset is not None)
         self.symb = first_asset + second_asset
-        self.__parser = Parser(self.symb, tf, timezone)
-        self.__tf_minutes = tf_to_minutes(tf)
+        self.__is_tf_given = (tf is not None)
+        if self.__is_tf_given:
+            self.__tf_minutes = tf_to_minutes(tf)
         self.__update_settings()
         # cleaning logs
         f = open(self.__settings["log_file"], 'w')
         f.close()
+        self.__parser = Parser(self.symb, tf, timezone)
 
-    # function to start infinite loop to trade every timeframe minutes
     def trade(self) -> None:
+        """Function to start infinite loop to trade every timeframe minutes"""
         def print_state(msg: str = None):
             with open(self.__settings["log_file"], 'a') as f:
                 print(
@@ -88,6 +92,7 @@ class Trader:
         step = 0
         while True:
             step += 1
+            self.__update_balances()
             wait_till(start_time)
             # getting rows to calculate indicators
             table = self.__parser.get_table(
@@ -98,7 +103,6 @@ class Trader:
                 self.__settings['indicators'],
                 drop_first=True
             )
-            self.__update_balances()
 
             prediction = strategy.predict(table)
             if prediction > 0:
@@ -107,19 +111,26 @@ class Trader:
                 self.__buy(1, -prediction * self.__second_balance)
 
             if step % self.__settings['refresh_friq'] == 0:
-                self.__update_settings()
                 self.__update_symb_precision(table.iloc[-1]['Close'])
                 print_state()
 
+            self.__update_settings()
+
             start_time += timedelta(minutes=self.__tf_minutes)
 
-    # updating settings from .json file
     def __update_settings(self) -> None:
+        """Updating settings from .json file"""
         with open(self.__settings_file, 'r') as f:
             self.__settings = json.load(f)['trader']
+        if not self.__is_first_asset_given:
+            self.first_asset = self.__settings['first_asset']
+        if not self.__is_second_asset_given:
+            self.second_asset = self.__settings['second_asset']
+        if not self.__is_tf_given:
+            self.__tf_minutes = tf_to_minutes(self.__settings['timeframe'])
 
-    # updating balance making query to market
     def __update_balances(self) -> None:
+        """Updating balance making query to market"""
         assets = self.client.user_asset()
         self.__first_balance = [
             float(asset['free']) for asset in assets
@@ -135,9 +146,9 @@ class Trader:
             self.__second_balance[0] if len(self.__second_balance) else 0
         self.__second_balance = max(0, self.__second_balance - self.__income)
 
-    # updating market assets precisions to use in queries
     def __update_symb_precision(self, price: float) -> None:
         """
+        Updating market assets precisions to use in queries
         :param price: curent symbol price
         """
         symbol_info = self.client.exchange_info(symbol=self.symb)
@@ -166,7 +177,6 @@ class Trader:
                     minNotional / price * 2,
                     self.__min_amount_first
                 )
-
         self.__symbol_precision = int(round(-math.log(stepSize, 10), 0))
 
         with open(self.__settings['log_file'], 'a') as f:

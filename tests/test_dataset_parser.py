@@ -9,7 +9,7 @@ from bot.utiles import tf_to_minutes
 
 
 class Test(unittest.TestCase):
-    # function to mock requests
+    """Function to mock requests"""
     def __mocked_response(*args, **kwargs):
         class MockResponse:
             def __init__(self, json_data, status_code):
@@ -49,11 +49,11 @@ class Test(unittest.TestCase):
 
         return MockResponse(None, 404)
 
-    # checks correct get_table request
     @patch('bot.dataset_parser.sleep')
     @patch('bot.dataset_parser.datetime')
     @patch('bot.dataset_parser.requests.get', side_effect=__mocked_response)
     def test_get_table(self, send_request_mock, now_mock, _):
+        """Checks correct get_table request"""
         now_mock.now.return_value = parse_dt("2023-01-20T00:00:00")
 
         for tf in ['1m', '5m', '1h']:
@@ -91,11 +91,10 @@ class Test(unittest.TestCase):
 
                 send_request_mock.call_args_list = []
 
-    # checks fail get_table request
     @patch('bot.dataset_parser.sleep')
     @patch('bot.dataset_parser.requests.get', side_effect=__mocked_response)
     def test_exc(self, send_request_mock, _):
-        # check exceptions
+        """checks fail get_table request"""
         # no response
         parser = Parser('fail_500', '1m', ignore_gaps=True)
         try:

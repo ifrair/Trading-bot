@@ -10,7 +10,7 @@ class Simulator:
     __print_friq = 1000000
     __withdrawal_coef = 0
     __income = 0
-    __comission = 1e-3
+    __comission = 0.2374e-3
 
     def __init__(self, df_x: pd.DataFrame, df_y: pd.DataFrame):
         """

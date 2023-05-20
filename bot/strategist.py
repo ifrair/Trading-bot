@@ -5,24 +5,25 @@ import pandas as pd
 
 
 class Strategy:
-    # load settings and fit models here
+    """pattern strategy class"""
     def __init__(self):
+        """load settings and fit models here"""
         pass
 
-    # function makes prediction using table
-    # prediction is in range (-1, 1) where
-    # 0 - now is normal price
-    # 1 - curent price is too high (sell)
-    # -1 - curent price is too low (buy)
     def predict(self, table: pd.DataFrame) -> float:
         """
+        function makes prediction using table
+        prediction is in range (-1, 1) where
+        0 - now is normal price
+        1 - curent price is too high (sell)
+        -1 - curent price is too low (buy)
         :param table: dataframe with indicators to make prediction
         """
         pass
 
 
-# classic cci stratagy
 class CCI_Strategy(Strategy):
+    """classic cci stratagy"""
     def __init__(self):
         with open('settings.json', 'r') as f:
             self.__settings = json.load(f)['strategist']['CCI']
@@ -43,15 +44,20 @@ class CCI_Strategy(Strategy):
 
 
 class SGD_Strategy(Strategy):
+    """SGD stratagy"""
     def __init__(self):
         with open('settings.json', 'r') as f:
             self.__settings = json.load(f)['strategist']['SGD']
 
     def predict(self, table: pd.DataFrame) -> float:
+        """
+        :param table: dataframe with indicators to make predictions
+        """
         pass
 
 
 def get_strategy(strategy_name: str) -> Strategy:
+    """get strategy object by name"""
     strategy_map = {
         "CCI": CCI_Strategy,
         "ML": SGD_Strategy,

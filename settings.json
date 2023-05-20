@@ -1,20 +1,26 @@
 {
     "main": {
         "log_file": "log_main.txt",
+        "num_fail_tries": 5,
         "timezone": 3
     },
     "parser": {
         "log_file": "log_parser.txt",
-        "batch_size": 1000
+        "batch_size": 1000,
+        "num_fail_tries": 5,
+        "sleep_time": 0.2
     },
     "trader": {
+        "first_asset": "BTC",
         "indicators": ["ALL"],
         "indicator_window": 12,
         "log_file": "log_trader.txt",
         "num_stored_rows": 200,
         "refresh_friq": 10,
+        "second_asset": "USDT",
         "slippage": 0.01,
         "strategy": "CCI",
+        "timeframe": "1m",
         "withdrawal_coef": 0
     },
     "strategist": {

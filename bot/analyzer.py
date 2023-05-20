@@ -4,7 +4,7 @@ import pandas as pd
 
 
 class Analyzer:
-    # calculates strategy statistics on dataframe
+    """calculates strategy statistics on dataframe"""
     def analyze(
         self,
         table: pd.DataFrame,

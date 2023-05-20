@@ -8,8 +8,8 @@ class Test(unittest.TestCase):
 
     table_path = "tests/data_1m_120_rows.csv"
 
-    # checks base requirements
     def test_indicators(self):
+        """Checks base requirements"""
         table = pd.read_csv(self.table_path)
         columns_orig = table.columns
         indicators = Indicators()
@@ -27,8 +27,8 @@ class Test(unittest.TestCase):
             assert all(val is not None for val in table[ind].values), \
                 f"Found None value in {ind} column"
 
-    # checks indicators that should be
     def __check_indicator(self, ind_name: str, columns_list: list = []):
+        """Checks indicators that should be"""
         table = pd.read_csv(self.table_path)
         columns_expected = set(table.columns).union(columns_list)
         Indicators().calc_indicators(table, [ind_name], drop_first=True)
@@ -45,22 +45,22 @@ class Test(unittest.TestCase):
     def test_ADI(self):
         _ = self.__check_indicator('ADI', ['ADI', 'ADIEMA', 'CLV'])
 
-    # checks CCI
     def test_CCI(self):
+        """Checks CCI"""
         table = self.__check_indicator('CCI', ['CCI', 'TP', 'SMA', 'MAD'])
         assert all(table['CCI'].abs() < 1000)
 
-    # checks MACD
     def test_MACD(self):
+        """Checks MACD"""
         _ = self.__check_indicator('MACD', ['MACD', 'MACDEMA'])
 
-    # checks MFI
     def test_MFI(self):
+        """Checks MFI"""
         table = self.__check_indicator('MFI', ['MFI', 'TP', 'MR'])
         assert all(table['MFI'] >= 0) and all(table['MFI'] <= 100)
 
-    # checks OBV
     def test_OBV(self):
+        """Checks OBV"""
         _ = self.__check_indicator('OBV', ['OBV', 'OBVCA'])
 
     # checks PVT
