@@ -14,6 +14,7 @@ class Test(unittest.TestCase):
         """Function to mock Strategy"""
         class Strategy:
             row: int = 0
+
             def predict(self, *args, **kwargs) -> float:
                 self.row += 1
                 if self.row > 100:
@@ -24,7 +25,6 @@ class Test(unittest.TestCase):
                     return 0.9
 
         return Strategy()
-
 
     @patch('bot.analyzer.get_strategy', side_effect=__mocked_Strategy)
     def test_analyzer(self, *args):

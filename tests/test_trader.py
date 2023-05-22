@@ -9,8 +9,10 @@ from unittest.mock import patch
 
 from bot.trader import Trader
 
+
 class TestEnd(Exception):
     pass
+
 
 class Test(unittest.TestCase):
     settings_file = 'tests/settings_for_test.json'
@@ -74,6 +76,7 @@ class Test(unittest.TestCase):
         """Function to mock Strategy"""
         class Strategy:
             row: int = 0
+
             def predict(self, *args, **kwargs) -> float:
                 self.row += 1
                 if self.row > 2000:
@@ -86,7 +89,6 @@ class Test(unittest.TestCase):
                     return -0.9
 
         return Strategy()
-
 
     @patch('bot.trader.datetime')
     @patch('bot.trader.wait_till')
@@ -129,12 +131,18 @@ class Test(unittest.TestCase):
 
         # check strategy creating
         self.assertEqual(len(args[0].call_args_list), 1)
-        self.assertEqual(args[0].call_args_list[0].args[0], settings["strategy"])
+        self.assertEqual(
+            args[0].call_args_list[0].args[0],
+            settings["strategy"]
+        )
         # check parser creating
         self.assertEqual(len(args[1].call_args_list), 1)
         # check indicators creating
         self.assertEqual(len(args[2].call_args_list), 1)
-        self.assertEqual(args[2].call_args_list[0].args[0], settings["indicator_window"])
+        self.assertEqual(
+            args[2].call_args_list[0].args[0],
+            settings["indicator_window"]
+        )
         # check wait_till
         priv_time = args[3].call_args_list[0].args[0] - timedelta(minutes=1)
         for call in args[3].call_args_list:

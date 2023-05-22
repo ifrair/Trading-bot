@@ -60,6 +60,7 @@ class CCI_Strategy(Strategy):
             return max(-1, cci / 100)
         return 0
 
+
 class SGD_Strategy(Strategy):
     """SGD stratagy"""
     def __init__(self):

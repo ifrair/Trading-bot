@@ -25,7 +25,7 @@ class Trader:
         second_asset: str = None,
         tf: str = None,
         timezone: int = 0,
-        settings_file_path = "settings.json",
+        settings_file_path: str = "settings.json",
     ):
         """
         :param api_key: api key to market
@@ -33,6 +33,7 @@ class Trader:
         :param first_asset: first asset of trading pair
         :param second_asset: second asset of trading pair
         :param tf: candle timeframe
+        :param settings_file_path: path for settings.json
         """
         self.client = Spot(
             api_key,
