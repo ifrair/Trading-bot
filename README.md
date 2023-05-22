@@ -17,8 +17,9 @@ To add strategy:
 1) Inherit your strategy class in strategist.py.
 2) Put heavy operations to init (like fit for ML srategies).
 3) Add predict function, it returns number in range from -1 (that means that price now is too low) to 1 (too high). 0 means that the order will not be formed.
-4) Add strategy params and indicators to settings (optional).
-5) Test your strategy using Analizer from analizer.py (optional).
+4) Add strategy name to get_strategy function.
+5) Add strategy params and indicators to settings (optional).
+6) Test your strategy using Analizer from analizer.py (optional).
 ## Settings:
 All is in settings.json. Please don`t change param names.
 ### main
