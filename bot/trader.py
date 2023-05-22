@@ -12,7 +12,6 @@ import math
 
 
 class Trader:
-    __settings_file = "settings.json"
     __first_balance = 0.0
     __second_balance = 0.0
     # money to save (in second asset by default)
@@ -25,7 +24,8 @@ class Trader:
         first_asset: str = None,
         second_asset: str = None,
         tf: str = None,
-        timezone: int = 0
+        timezone: int = 0,
+        settings_file_path = "settings.json",
     ):
         """
         :param api_key: api key to market
@@ -40,6 +40,7 @@ class Trader:
             base_url="https://api.binance.com",
             # proxies={ 'https': creds.proxy }
         )
+        self.__settings_file = settings_file_path
         self.first_asset = first_asset
         self.__is_first_asset_given = (first_asset is not None)
         self.second_asset = second_asset

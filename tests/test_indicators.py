@@ -5,7 +5,6 @@ from bot.indicators import Indicators
 
 
 class Test(unittest.TestCase):
-
     table_path = "tests/data_1m_120_rows.csv"
 
     def test_indicators(self):

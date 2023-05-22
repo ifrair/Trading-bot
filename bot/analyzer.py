@@ -42,19 +42,22 @@ class Analyzer:
                 avg_price -= sz * buy_price
                 amount -= sz
 
+        avg_profit = sum_profit / orders_size if orders_size > 0 else 0
+        avg_profit_on_order = (sum_profit - orders_size * commission) / \
+            num_orders if num_orders > 0 else 0
         result = {
             # average profit on an all-money order
-            'avg_profit': sum_profit / orders_size,
+            'avg_profit': avg_profit,
             # total size of transactions relative to all money
             'orders_size': orders_size,
             # number of completed orders
             'num_orders': num_orders,
             # average profit minus commission on an all-money order
-            'com_profit': sum_profit / orders_size - commission,
+            'com_profit': avg_profit - commission,
             # total profit including commission and compound interest
             'total_profit': pow(
-                (sum_profit - orders_size * commission) / num_orders + 1,
-                num_orders
+                avg_profit_on_order + 1,
+                num_orders,
             ) - 1,
         }
         return result

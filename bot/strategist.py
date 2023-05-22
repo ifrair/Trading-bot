@@ -22,6 +22,24 @@ class Strategy:
         pass
 
 
+class ADI_Strategy(Strategy):
+    """classic ADI stratagy"""
+    def predict(self, table: pd.DataFrame) -> float:
+        """
+        :param table: dataframe with indicators to make predictions
+        """
+        adi = table.iloc[-1]['ADI']
+        adi_priv = table.iloc[-2]['ADI']
+        adiema = table.iloc[-1]['ADIEMA']
+        adiema_priv = table.iloc[-2]['ADIEMA']
+
+        if adi < adiema and adi_priv < adiema_priv:
+            return -1
+        elif adi > adiema and adi_priv > adiema_priv:
+            return 1
+        return 0
+
+
 class CCI_Strategy(Strategy):
     """classic cci stratagy"""
     def __init__(self):
@@ -42,7 +60,6 @@ class CCI_Strategy(Strategy):
             return max(-1, cci / 100)
         return 0
 
-
 class SGD_Strategy(Strategy):
     """SGD stratagy"""
     def __init__(self):
@@ -59,6 +76,7 @@ class SGD_Strategy(Strategy):
 def get_strategy(strategy_name: str) -> Strategy:
     """get strategy object by name"""
     strategy_map = {
+        "ADI": ADI_Strategy,
         "CCI": CCI_Strategy,
         "ML": SGD_Strategy,
     }

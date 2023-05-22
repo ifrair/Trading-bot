@@ -1,11 +1,11 @@
 {
     "main": {
-        "log_file": "logs/log_main.txt",
+        "log_file": "tests/logs/log_main.txt",
         "num_fail_tries": 5,
         "timezone": 3
     },
     "parser": {
-        "log_file": "logs/log_parser.txt",
+        "log_file": "tests/logs/log_parser.txt",
         "batch_size": 1000,
         "num_fail_tries": 5,
         "sleep_time": 0.2
@@ -14,7 +14,7 @@
         "first_asset": "BTC",
         "indicators": ["ALL"],
         "indicator_window": 12,
-        "log_file": "logs/log_trader.txt",
+        "log_file": "tests/logs/log_trader.txt",
         "num_stored_rows": 200,
         "refresh_friq": 10,
         "second_asset": "USDT",

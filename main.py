@@ -7,7 +7,7 @@ from bot.simulator import Simulator
 from bot.trader import Trader
 from bot.utiles import tf_to_minutes
 
-from binance.error import ClientError
+from binance.error import ClientError, ServerError
 from datetime import datetime, timedelta
 from time import sleep
 
@@ -29,12 +29,12 @@ def analyze():
     """Function to calculate effectiveness of strategy"""
     symb = 'EOS'
     tf = '1m'
-    num_rows = 10000
+    num_rows = 100000
     table = pd.read_csv(f'data/data_{symb}_{tf}.csv').iloc[-num_rows:]
     Indicators().calc_indicators(table, drop_first=True)
     results = Analyzer().analyze(
         table=table,
-        strategy_name="CCI",
+        strategy_name="ADI",
         commission=1e-3,
     )
     print(
@@ -115,7 +115,7 @@ def trade():
 
         except ResponseError as e:
             print_logs(f"Parser error:\n{repr(e)}")
-        except ClientError as e:
+        except ClientError or ServerError as e:
             print_logs(f"Trader error:\n{e.error_code},\n{e.error_message}")
         except Exception as e:
             print_logs(f"Critical error:\n{repr(e)}\nClosing...")

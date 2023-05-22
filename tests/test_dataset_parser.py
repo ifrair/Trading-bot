@@ -9,8 +9,8 @@ from bot.utiles import tf_to_minutes
 
 
 class Test(unittest.TestCase):
-    """Function to mock requests"""
     def __mocked_response(*args, **kwargs):
+        """Function to mock requests"""
         class MockResponse:
             def __init__(self, json_data, status_code):
                 self.json_data = json_data
