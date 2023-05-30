@@ -8,6 +8,8 @@ class Indicators:
     # all available indicators
     ind_list = ["ADI", "CCI", "MACD", "MFI", "OBV", "PVT", "RSI"]
 
+    eps = 1e-4
+
     def __init__(self, window: int = 12):
         """
         :param window: size of window to indicators calculation
@@ -60,7 +62,7 @@ class Indicators:
         :param df: dataframe to calculate indicator
         """
         self.__calc_MAD(df)
-        df['CCI'] = (df['TP'] - df['SMA']) / df['MAD'] / 0.015
+        df['CCI'] = (df['TP'] - df['SMA']) / (df['MAD'] + self.eps) / 0.015
 
     def calc_MACD(self, df: pd.DataFrame) -> None:
         """
@@ -113,8 +115,8 @@ class Indicators:
         :param df: dataframe to calculate indicator
         """
         self.__calc_EMAUD(df)
-        df['RS'] = df['EMAU'] / (df['EMAD'] + 1e-5)
-        df['RSI'] = 100 * df['EMAU'] / (df['EMAU'] + df['EMAD'])
+        df['RS'] = df['EMAU'] / (df['EMAD'] + self.eps)
+        df['RSI'] = 100 * df['EMAU'] / (df['EMAU'] + df['EMAD'] + self.eps)
 
     # ---------------------------------------------------- Moving averages
 
@@ -164,7 +166,7 @@ class Indicators:
             return
         df['CLV'] = df['Volume coin'] * \
             (2 * df['Close'] - df['Low'] - df['High']) / \
-            (df['High'] - df['Low'])
+            (df['High'] - df['Low'] + self.eps)
 
     def __calc_EMAUD(self, df: pd.DataFrame) -> None:
         """
@@ -211,7 +213,7 @@ class Indicators:
         NMF[TP_delta >= 0] = 0
         PMFS = PMF.rolling(window=self.window).sum().fillna(0)
         NMFS = NMF.rolling(window=self.window).sum().fillna(0)
-        df['MR'] = PMFS / NMFS
+        df['MR'] = PMFS / np.maximum(NMFS, self.eps)
 
     def __calc_SMA(self, df: pd.DataFrame) -> None:
         """

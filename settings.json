@@ -29,7 +29,8 @@
             "CCI_min": -100
         },
         "SGD": {
-            "fit_table": "data/data_BTC_1m.csv"
+            "fit_table": "data/data_EOS_1m.csv",
+            "order_size_coef": 1
         }
     }
 }

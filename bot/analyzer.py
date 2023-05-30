@@ -5,6 +5,8 @@ import pandas as pd
 
 class Analyzer:
     """calculates strategy statistics on dataframe"""
+    window = 10
+
     def analyze(
         self,
         table: pd.DataFrame,
@@ -22,9 +24,9 @@ class Analyzer:
         orders_size = 0
         avg_price = 0
         num_orders = 0
-        for i in range(99, table.shape[0]):
+        for i in range(self.window-1, table.shape[0]):
             pred = strategy.predict(
-                table.iloc[i-99: i+1].reset_index(drop=True)
+                table.iloc[i-self.window+1: i+1]
             )
             price = table['Close'].iloc[i]
             if pred < 0 and amount < 1:

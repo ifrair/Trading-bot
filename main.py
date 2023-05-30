@@ -17,6 +17,7 @@ import unittest
 # import warnings
 # warnings.filterwarnings("ignore")
 
+pd.options.mode.chained_assignment = None
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
@@ -27,14 +28,15 @@ with open("settings.json", 'r') as f:
 
 def analyze():
     """Function to calculate effectiveness of strategy"""
-    symb = 'EOS'
+    symb = 'BTC'
     tf = '1m'
-    num_rows = 100000
+    num_rows = 10000
     table = pd.read_csv(f'data/data_{symb}_{tf}.csv').iloc[-num_rows:]
     Indicators().calc_indicators(table, drop_first=True)
+    table = table.drop(columns=['Next Close', 'Close Delta']).reset_index(drop=True)
     results = Analyzer().analyze(
         table=table,
-        strategy_name="ADI",
+        strategy_name="SGD",
         commission=1e-3,
     )
     print(
@@ -58,10 +60,10 @@ def download_data():
     )
     table = parser.get_table("2020-01-01T00:00:00", "2023-05-15T00:00:00")
     # table = parser.get_table("2023-04-12T12:20:00", 1)
-    # table = pd.read_csv("data/data_BTC_1d.csv").iloc[:300]
+    # table = pd.read_csv("data/data_EOS_1d.csv").iloc[:300]
     Indicators().calc_indicators(table, drop_first=True)
     draw_dataset(table)
-    table.to_csv('data/data_EOS_1m.csv', index=False)
+    # table.to_csv('data/data_EOS_1m.csv', index=False)
     return table
 
 
@@ -128,4 +130,4 @@ def trade():
         print_logs(f"Restartng, Try number: {tries}")
 
 
-test()
+analyze()
