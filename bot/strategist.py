@@ -2,7 +2,7 @@ import json
 import pandas as pd
 
 from sklearn.linear_model import SGDRegressor
-from sklearn.metrics import mean_absolute_error as mae
+# from sklearn.metrics import mean_absolute_error as mae
 from sklearn.preprocessing import StandardScaler
 
 from bot.utiles import time_to_int
@@ -12,6 +12,7 @@ from bot.indicators import Indicators
 class Strategy:
     """pattern strategy class"""
     window: int = 10
+
     def __init__(self):
         """load settings and fit models here"""
         pass
@@ -89,12 +90,16 @@ class SGD_Strategy(Strategy):
         )
 
         Y_table = table['Close Delta']
-        table = table.drop(columns=['Next Close', 'Close Delta']).reset_index(drop=True)
+        table = table.drop(
+            columns=['Next Close', 'Close Delta']
+        ).reset_index(drop=True)
 
         self.scaler = StandardScaler()
         table = pd.DataFrame(self.scaler.fit_transform(table))
         self.scaler_Y = StandardScaler()
-        Y_table = pd.DataFrame(self.scaler_Y.fit_transform(pd.DataFrame(Y_table)))
+        Y_table = pd.DataFrame(
+            self.scaler_Y.fit_transform(pd.DataFrame(Y_table))
+        )
 
         self.model = SGDRegressor().fit(
             table,

@@ -16,7 +16,7 @@
         "indicator_window": 12,
         "log_file": "logs/log_trader.txt",
         "num_stored_rows": 200,
-        "refresh_friq": 10,
+        "refresh_friq": 1,
         "second_asset": "USDT",
         "slippage": 0.01,
         "strategy": "CCI",

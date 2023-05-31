@@ -73,8 +73,9 @@ class Trader:
         self.__update_settings()
         strategy = get_strategy(self.__settings['strategy'])
         indicators = Indicators(self.__settings['indicator_window'])
+        table = self.__parser.get_table(1)
         self.__update_symb_precision(
-            self.__parser.get_table(1).iloc[-1]['Close']
+            table.iloc[-1]['Close']
         )
 
         # updating start time
@@ -95,6 +96,8 @@ class Trader:
         while True:
             step += 1
             self.__update_balances()
+            if step == 1:
+                print_state()
             wait_till(start_time)
             # getting rows to calculate indicators
             table = self.__parser.get_table(

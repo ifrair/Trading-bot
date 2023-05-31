@@ -28,15 +28,17 @@ with open("settings.json", 'r') as f:
 
 def analyze():
     """Function to calculate effectiveness of strategy"""
-    symb = 'BTC'
+    symb = 'EOS'
     tf = '1m'
     num_rows = 10000
     table = pd.read_csv(f'data/data_{symb}_{tf}.csv').iloc[-num_rows:]
     Indicators().calc_indicators(table, drop_first=True)
-    table = table.drop(columns=['Next Close', 'Close Delta']).reset_index(drop=True)
+    table = table.drop(
+        columns=['Next Close', 'Close Delta']
+    ).reset_index(drop=True)
     results = Analyzer().analyze(
         table=table,
-        strategy_name="SGD",
+        strategy_name="CCI",
         commission=1e-3,
     )
     print(
@@ -50,30 +52,37 @@ def analyze():
     )
 
 
-def download_data():
+def download():
     """Function to download data from market"""
     parser = Parser(
-        'EOSUSDT',
-        '1m',
+        'ETHUSDT',
+        '15m',
         # timezone=settings["timezone"],
         ignore_gaps=True,
     )
-    table = parser.get_table("2020-01-01T00:00:00", "2023-05-15T00:00:00")
+    table = parser.get_table("2023-01-01T00:00:00", "2023-05-15T00:00:00")
     # table = parser.get_table("2023-04-12T12:20:00", 1)
     # table = pd.read_csv("data/data_EOS_1d.csv").iloc[:300]
+    # Indicators().calc_indicators(table, drop_first=True)
+    # draw_dataset(table)
+    table.to_csv('data/data.csv', index=False)
+    return table
+
+
+def draw():
+    """Function to draw dataset"""
+    table = pd.read_csv("data/data_EOS_1d.csv").iloc[:300]
     Indicators().calc_indicators(table, drop_first=True)
     draw_dataset(table)
-    # table.to_csv('data/data_EOS_1m.csv', index=False)
-    return table
 
 
 def simulate():
     """Function to load data and run simulator"""
-    df = pd.read_csv("data/data_EOS_1m.csv")
+    df = pd.read_csv("data/data_EOS_1m.csv").iloc[-9900:]
     Indicators().calc_indicators(df, drop_first=True)
     df_y = df[["Next Close", "Close Delta"]]
     df_x = df.drop(columns=["Next Close", "Close Delta"])
-    Simulator(df_x.iloc[-9900:], df_y.iloc[-9900:]).simulate()
+    Simulator(df_x, df_y).simulate()
 
 
 def test():

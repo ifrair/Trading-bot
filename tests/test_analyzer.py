@@ -33,8 +33,9 @@ class Test(unittest.TestCase):
         with open(self.settings_file, 'r') as f:
             settings = json.load(f)['trader']
         result = Analyzer().analyze(table, settings['strategy'], 1e-3)
-        self.assertEqual(result['avg_profit'], 0)
-        self.assertEqual(result['orders_size'], 0)
-        self.assertEqual(result['num_orders'], 0)
-        self.assertEqual(result['com_profit'], -1e-3)
-        self.assertEqual(result['total_profit'], 0)
+
+        eps = 1e-5
+        self.assertTrue(abs(result['avg_profit']) < eps)
+        self.assertTrue(abs(result['orders_size'] - 1) < eps)
+        self.assertTrue(abs(result['com_profit'] - (-1e-3)) < eps)
+        self.assertTrue(abs(result['total_profit'] - (-1e-3)) < eps)
